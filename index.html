@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Painel de estudos</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <header class="topbar"><div class="toprow"><div><div class="brand">Trilha de Aprovação</div><div class="subbrand">Um painel de estudos para duas pessoas</div></div><div style="text-align:right;font-size:12px;opacity:.85">Ciclo de preparação<br>Base geral + CNU</div></div></header>
+  <main>
+    <div class="person-switch" aria-label="Selecionar estudante">
+      <button class="active" data-person="Eu">Meu painel</button>
+      <button data-person="Dupla">Painel da dupla</button>
+    </div>
+    <div class="tabs" role="tablist">
+      <button class="active" data-tab="visao">Visão geral</button>
+      <button data-tab="registro">Registrar questões</button>
+      <button data-tab="revisoes">Revisões</button>
+      <button data-tab="dificuldades">Dificuldades</button>
+      <button data-tab="simulados">Simulados</button>
+      <button data-tab="metas">Metas</button>
+    </div>
+    <section id="visao" class="panel">
+      <div style="margin-bottom:18px"><h1>Seu progresso, sem complicação.</h1><p class="muted">Registre o que estudou, acompanhe sua evolução e descubra onde vale investir mais tempo.</p></div>
+      <div class="grid">
+        <div class="card span-3"><div class="metric" id="mQuestions">0</div><div class="metric-label">Questões resolvidas</div></div>
+        <div class="card span-3"><div class="metric" id="mAccuracy">—</div><div class="metric-label">Taxa geral de acertos</div></div>
+        <div class="card span-3"><div class="metric" id="mSessions">0</div><div class="metric-label">Registros de estudo</div></div>
+        <div class="card span-3"><div class="metric" id="mReviews">0</div><div class="metric-label">Revisões pendentes</div></div>
+        <div class="card span-7"><h2>Evolução dos últimos 7 dias</h2><canvas id="trend" class="chart" aria-label="Gráfico de evolução"></canvas><div class="legend"><span><i class="dot"></i>Acertos por dia</span></div></div>
+        <div class="card span-5"><h2>Desempenho por disciplina</h2><div id="subjectBars"></div></div>
+        <div class="card span-12"><h2>Últimos registros</h2><div id="recent"></div></div>
+      </div>
+    </section>
+    <section id="registro" class="panel hidden">
+      <h1>Registrar questões</h1><p class="muted">Preencha somente o essencial. O painel calcula o aproveitamento automaticamente.</p>
+      <div class="card">
+        <form id="recordForm" class="form-grid">
+          <div class="field"><label for="rDate">Data</label><input id="rDate" type="date" required></div>
+          <div class="field"><label for="rSubject">Disciplina</label><select id="rSubject" required></select></div>
+          <div class="field"><label for="rTopic">Assunto</label><input id="rTopic" placeholder="Ex.: interpretação de texto" required></div>
+          <div class="field"><label for="rSource">Origem / banca (opcional)</label><input id="rSource" placeholder="Ex.: Cebraspe, FGV, questões avulsas"></div>
+          <div class="field"><label for="rTotal">Questões resolvidas</label><input id="rTotal" type="number" min="1" value="20" required></div>
+          <div class="field"><label for="rCorrect">Acertos</label><input id="rCorrect" type="number" min="0" value="14" required></div>
+          <div class="field"><label for="rDifficulty">Como foi?</label><select id="rDifficulty"><option value="ok">Tranquilo</option><option value="medio">Exigiu atenção</option><option value="dificil">Muito difícil</option></select></div>
+          <div class="field"><label for="rError">Principal dificuldade</label><select id="rError"><option value="">Não se aplica / não identifiquei</option><option>Não conhecia o conteúdo</option><option>Esqueci a regra ou conceito</option><option>Interpretei errado</option><option>Confundi alternativas</option><option>Não soube aplicar o conteúdo</option><option>Falta de atenção</option></select></div>
+          <div class="field full"><label for="rNotes">Observação (opcional)</label><textarea id="rNotes" placeholder="O que vale lembrar na próxima revisão?"></textarea></div>
+          <div class="field full"><div class="actions"><button class="primary" type="submit">Salvar registro</button><button type="reset">Limpar</button></div></div>
+        </form>
+      </div>
+    </section>
+    <section id="revisoes" class="panel hidden">
+      <h1>Revisões</h1><p class="muted">Transforme erros e assuntos difíceis em revisões agendadas. Sugestão: rever após 1, 7 e 30 dias.</p>
+      <div class="grid">
+        <div class="card span-5"><h2>Agendar revisão</h2><form id="reviewForm" class="form-grid">
+          <div class="field full"><label for="vSubject">Disciplina</label><select id="vSubject"></select></div>
+          <div class="field full"><label for="vTopic">Assunto</label><input id="vTopic" placeholder="Assunto para revisar" required></div>
+          <div class="field"><label for="vDate">Data da revisão</label><input id="vDate" type="date" required></div>
+          <div class="field"><label for="vType">Tipo</label><select id="vType"><option>Revisão de conteúdo</option><option>Refazer questões erradas</option><option>Revisão de simulado</option></select></div>
+          <div class="field full"><button class="primary" type="submit">Agendar revisão</button></div>
+        </form></div>
+        <div class="card span-7"><h2>Agenda de revisões</h2><div id="reviewList"></div></div>
+      </div>
+    </section>
+    <section id="dificuldades" class="panel hidden">
+      <h1>Mapa de dificuldades</h1><p class="muted">Veja quais assuntos e tipos de erro mais aparecem nos seus registros. Use isso para decidir o próximo estudo.</p>
+      <div class="grid"><div class="card span-6"><h2>Por tipo de dificuldade</h2><div id="errorList"></div></div><div class="card span-6"><h2>Assuntos que merecem atenção</h2><div id="weakList"></div></div><div class="card span-12"><div class="notice">A taxa de acertos é um sinal, não uma sentença. Um assunto com poucas questões ainda precisa de mais amostra. Priorize dificuldades recorrentes e erros que você ainda não consegue explicar.</div></div></div>
+    </section>
+    <section id="simulados" class="panel hidden">
+      <h1>Simulados</h1><p class="muted">Registre o resultado de provas completas ou blocos cronometrados e acompanhe a evolução.</p>
+      <div class="grid"><div class="card span-5"><h2>Novo simulado</h2><form id="mockForm" class="form-grid">
+        <div class="field"><label for="sDate">Data</label><input id="sDate" type="date" required></div>
+        <div class="field"><label for="sName">Nome / prova</label><input id="sName" placeholder="Ex.: Simulado geral 01" required></div>
+        <div class="field"><label for="sTotal">Questões</label><input id="sTotal" type="number" min="1" value="60" required></div>
+        <div class="field"><label for="sCorrect">Acertos</label><input id="sCorrect" type="number" min="0" value="35" required></div>
+        <div class="field"><label for="sMinutes">Tempo (minutos)</label><input id="sMinutes" type="number" min="0" placeholder="Ex.: 180"></div>
+        <div class="field full"><label for="sNotes">O que revisar?</label><textarea id="sNotes" placeholder="Matérias fracas, gestão do tempo, interpretação..."></textarea></div>
+        <div class="field full"><button class="primary" type="submit">Salvar simulado</button></div>
+      </form></div><div class="card span-7"><h2>Histórico de simulados</h2><div id="mockList"></div></div></div>
+    </section>
+    <section id="metas" class="panel hidden">
+      <h1>Metas semanais</h1><p class="muted">Defina uma meta possível para sua rotina. O progresso considera os registros feitos de segunda a domingo.</p>
+      <div class="grid"><div class="card span-5"><h2>Configurar meta</h2><form id="goalForm" class="form-grid">
+        <div class="field full"><label for="gQuestions">Questões por semana</label><input id="gQuestions" type="number" min="1" value="150"></div>
+        <div class="field full"><label for="gSessions">Sessões por semana</label><input id="gSessions" type="number" min="1" value="15"></div>
+        <div class="field full"><button class="primary" type="submit">Atualizar metas</button></div>
+      </form></div><div class="card span-7"><h2>Progresso desta semana</h2><div id="goalProgress"></div></div><div class="card span-12"><div class="notice">Uma meta boa é aquela que cabe na vida real. Se a semana ficar apertada, reduza temporariamente a meta e mantenha o hábito. Não acumule sessões perdidas como dívida.</div></div></div>
+    </section>
+    <p class="footer-note">Os dados são guardados localmente neste navegador e neste dispositivo. Use “Exportar backup” regularmente para manter uma cópia segura ou transferir os dados.</p>
+    <div class="actions" style="margin-top:10px"><button class="small" id="exportBtn">Exportar backup</button><button class="small" id="importBtn">Importar backup</button><input id="importFile" type="file" accept="application/json" class="hidden"><button class="small danger" id="clearBtn">Apagar dados deste estudante</button></div>
+  </main>
+</div>
+<script src="app.js"></script>
+</body>
+</html>

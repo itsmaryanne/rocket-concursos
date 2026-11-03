@@ -7,11 +7,11 @@
   <title>Rocket Concursos</title>
   <link rel="stylesheet" href="style.css">
   <script>
-  try {
-    var t = localStorage.getItem("trilha_tema");
-    if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
-  } catch (e) {}
-</script>
+    try {
+      var t = localStorage.getItem("trilha_tema");
+      if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
+    } catch (e) { }
+  </script>
 </head>
 
 <body>
@@ -23,9 +23,10 @@
           <div class="subbrand">Acompanhe sua performance até a aprovação!</div>
         </div>
         <div style="display:flex;align-items:center;gap:14px">
-  <button id="themeBtn" class="theme-toggle" type="button" aria-label="Alternar entre modo noite e modo dia"></button>
-  <div style="text-align:right;font-size:12px;opacity:.85">Ciclo de preparação<br>Base geral</div>
-</div>
+          <button id="themeBtn" class="theme-toggle" type="button"
+            aria-label="Alternar entre modo noite e modo dia"></button>
+          <div style="text-align:right;font-size:12px;opacity:.85">Ciclo de preparação<br>Base geral</div>
+        </div>
       </div>
     </header>
     <main>
@@ -149,6 +150,8 @@
         <h1>Mapa de dificuldades</h1>
         <p class="muted">Veja quais assuntos e tipos de erro mais aparecem nos seus registros. Use isso para decidir o
           próximo estudo.</p>
+        <div class="notice">A taxa de acertos é um sinal, não uma sentença. Um assunto com poucas questões ainda precisa
+          de mais amostra. Priorize dificuldades recorrentes e erros que você ainda não consegue explicar.</div>
         <div class="grid">
           <div class="card span-6">
             <h2>Por tipo de dificuldade</h2>
@@ -157,11 +160,6 @@
           <div class="card span-6">
             <h2>Assuntos que merecem atenção</h2>
             <div id="weakList"></div>
-          </div>
-          <div class="card span-12">
-            <div class="notice">A taxa de acertos é um sinal, não uma sentença. Um assunto com poucas questões ainda
-              precisa de mais amostra. Priorize dificuldades recorrentes e erros que você ainda não consegue explicar.
-            </div>
           </div>
         </div>
       </section>
@@ -196,6 +194,8 @@
         <h1>Metas semanais</h1>
         <p class="muted">Defina uma meta possível para sua rotina. O progresso considera os registros feitos de segunda
           a domingo.</p>
+        <div class="notice">Uma meta boa é aquela que cabe na vida real. Se a semana ficar apertada, reduza
+          temporariamente a meta e mantenha o hábito. Não acumule sessões perdidas como dívida.</div>
         <div class="grid">
           <div class="card span-5">
             <h2>Configurar meta</h2>
@@ -211,15 +211,14 @@
             <h2>Progresso desta semana</h2>
             <div id="goalProgress"></div>
           </div>
-          <div class="card span-12">
-            <div class="notice">Uma meta boa é aquela que cabe na vida real. Se a semana ficar apertada, reduza
-              temporariamente a meta e mantenha o hábito. Não acumule sessões perdidas como dívida.</div>
-          </div>
         </div>
       </section>
-      <p class="footer-note">Os dados são guardados localmente neste navegador e neste dispositivo, isto é: acessar o
-        site por outro dispositivo não exibirá seus registros. Use “Exportar backup” sempre que considerar necessário,
-        para manter uma cópia segura ou transferir os dados.</p>
+      <div class="notice alert" role="note">
+        <strong>Seus dados ficam só neste navegador</strong>
+        <p>Os dados são guardados localmente neste navegador e neste dispositivo, isto é: acessar o site por outro
+          dispositivo não exibirá seus registros. Use “Exportar backup” sempre que considerar necessário, para manter
+          uma cópia segura ou transferir os dados.</p>
+      </div>
       <div class="actions" style="margin-top:10px"><button class="small" id="exportBtn">Exportar backup</button><button
           class="small" id="importBtn">Importar backup</button><input id="importFile" type="file"
           accept="application/json" class="hidden"><button class="small" id="renameBtn">Renomear

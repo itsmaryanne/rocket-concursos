@@ -470,6 +470,6 @@ button:disabled {
   margin: 0;
 }
 
-.panel > .notice {
+.panel>.notice {
   margin: 0 0 18px;
 }

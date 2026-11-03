@@ -3,7 +3,8 @@
 
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#241d4a">
   <title>Rocket Concursos</title>
   <link rel="stylesheet" href="style.css">
   <script>
@@ -22,10 +23,29 @@
           <div class="brand">Rocket Concursos</div>
           <div class="subbrand">Acompanhe sua performance até a aprovação!</div>
         </div>
-        <div style="display:flex;align-items:center;gap:14px">
+        <div class="topright">
           <button id="themeBtn" class="theme-toggle" type="button"
             aria-label="Alternar entre modo noite e modo dia"></button>
-          <div style="text-align:right;font-size:12px;opacity:.85">Ciclo de preparação<br>Base geral</div>
+          <div class="cycle">Ciclo de preparação<br>Base geral</div>
+          <div id="userArea" class="user-area hidden">
+            <button id="avatarBtn" class="avatar-btn" type="button" aria-label="Abrir meu perfil"></button>
+            <div class="menu-wrap">
+              <button id="menuBtn" class="menu-btn" type="button" aria-expanded="false" aria-controls="userMenu"
+                aria-label="Abrir menu"><span class="bars" aria-hidden="true"></span><i id="menuDot"
+                  class="menu-dot hidden" aria-hidden="true"></i></button>
+              <nav id="userMenu" class="user-menu hidden" aria-label="Menu do usuário">
+                <div id="menuUser" class="menu-user"></div>
+                <button class="menu-item" type="button" data-view="dashboard">Dashboard</button>
+                <button class="menu-item" type="button" data-view="perfil">Meu perfil</button>
+                <button class="menu-item" type="button" data-view="amigos">Amigos <span id="friendsBadge"
+                    class="badge hidden"></span></button>
+                <button class="menu-item" type="button" data-view="conquistas">Conquistas</button>
+                <button class="menu-item" type="button" data-view="suporte">Suporte</button>
+                <div class="menu-sep"></div>
+                <button class="menu-item danger" type="button" id="menuLogout">Sair</button>
+              </nav>
+            </div>
+          </div>
         </div>
       </div>
     </header>
@@ -56,30 +76,7 @@
       </section>
 
       <section id="appContent" class="hidden">
-        <div class="card social-card">
-          <div class="social-head">
-            <div id="sessionInfo" class="muted"></div>
-            <button id="logoutBtn" class="small" type="button">Sair</button>
-          </div>
-          <form id="friendSearchForm" class="friend-form">
-            <input id="friendQuery" maxlength="30" placeholder="Buscar por nome ou ID (5 dígitos)"
-              aria-label="Buscar usuários" required>
-            <button class="primary" type="submit">Buscar</button>
-          </form>
-          <div id="friendSearchResults" class="request-list"></div>
-          <div class="request-grid">
-            <div>
-              <h3>Pedidos recebidos</h3>
-              <div id="incomingRequests" class="request-list"></div>
-            </div>
-            <div>
-              <h3>Pedidos enviados</h3>
-              <div id="outgoingRequests" class="request-list"></div>
-            </div>
-          </div>
-          <div id="friendList" class="person-switch" aria-label="Lista de amigos"></div>
-        </div>
-
+      <section id="view-dashboard" class="view">
         <div class="person-switch" id="personSwitch" aria-label="Selecionar perfil para visualização"></div>
         <div id="viewModeNotice" class="notice hidden"></div>
 
@@ -259,6 +256,95 @@
           </div>
         </div>
       </section>
+            </section>
+
+      <section id="view-perfil" class="view hidden">
+        <h1>Meu perfil</h1>
+        <p class="muted">Sua foto e seu nome aparecem para os seus amigos.</p>
+        <div class="grid">
+          <div class="card span-5 profile-card">
+            <div id="profileAvatar"></div>
+            <div class="actions">
+              <button class="primary" id="changePhotoBtn" type="button">Alterar foto</button>
+              <button class="danger" id="removePhotoBtn" type="button">Remover foto</button>
+            </div>
+            <input id="avatarInput" type="file" accept="image/png,image/jpeg,image/webp" class="hidden">
+            <p class="muted">JPG, PNG ou WebP. A foto é recortada em formato quadrado e fica salva só neste navegador.</p>
+          </div>
+          <div class="card span-7">
+            <h2>Dados do perfil</h2>
+            <form id="profileForm" class="form-grid">
+              <div class="field full"><label for="profileName">Como gostaria de ser chamado?</label><input
+                  id="profileName" maxlength="30" required></div>
+              <div class="field full"><label for="profileIdValue">ID do perfil</label>
+                <div class="id-row"><input id="profileIdValue" readonly><button class="small" id="copyIdBtn"
+                    type="button">Copiar ID</button></div>
+                <span class="muted">Compartilhe seu ID para receber pedidos de amizade.</span>
+              </div>
+              <div class="field full"><button class="primary" type="submit">Salvar nome</button></div>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <section id="view-amigos" class="view hidden">
+        <h1>Amigos</h1>
+        <p class="muted">Busque por nome ou ID, envie pedidos e acompanhe o dashboard de quem aceitar.</p>
+        <div class="card social-card">
+          <form id="friendSearchForm" class="friend-form">
+            <input id="friendQuery" maxlength="30" placeholder="Nome ou ID (5 dígitos)"
+              aria-label="Buscar usuários" required>
+            <button class="primary" type="submit">Buscar</button>
+          </form>
+          <div id="friendSearchResults" class="request-list"></div>
+        </div>
+        <div class="grid">
+          <div class="card span-6">
+            <h2>Pedidos recebidos</h2>
+            <div id="incomingRequests" class="request-list"></div>
+          </div>
+          <div class="card span-6">
+            <h2>Pedidos enviados</h2>
+            <div id="outgoingRequests" class="request-list"></div>
+          </div>
+        </div>
+        <div class="card">
+          <h2>Meus amigos</h2>
+          <div id="friendList" class="friend-list" aria-label="Lista de amigos"></div>
+        </div>
+      </section>
+
+      <section id="view-conquistas" class="view hidden">
+        <h1>Conquistas</h1>
+        <p class="muted">Marcos da sua jornada de estudos.</p>
+        <div class="card empty-state">
+          <h2>Em breve</h2>
+          <p class="muted">Aqui vão aparecer as suas conquistas conforme você registra questões, revisões e simulados.</p>
+        </div>
+      </section>
+
+      <section id="view-suporte" class="view hidden">
+        <h1>Suporte</h1>
+        <p class="muted">Dúvidas frequentes sobre o funcionamento do site.</p>
+        <div class="card">
+          <details class="faq"><summary>Onde ficam salvos os meus dados?</summary>
+            <p class="muted">Somente neste navegador e neste dispositivo. Acessar por outro aparelho não mostra seus
+              registros.</p>
+          </details>
+          <details class="faq"><summary>Como faço para não perder meus dados?</summary>
+            <p class="muted">Use “Exportar backup” (no rodapé) com frequência. Para levar os dados a outro aparelho,
+              exporte lá e use “Importar backup” aqui.</p>
+          </details>
+          <details class="faq"><summary>Limpei o navegador e perdi tudo. Dá para recuperar?</summary>
+            <p class="muted">Só com um backup exportado antes. Sem backup, não há como recuperar os dados.</p>
+          </details>
+          <details class="faq"><summary>Como funciona o ID do perfil?</summary>
+            <p class="muted">É um número de 5 dígitos gerado ao criar o perfil. Você usa o ID e a senha para entrar, e
+              compartilha o ID para receber pedidos de amizade.</p>
+          </details>
+        </div>
+      </section>
+
       <div class="notice alert" role="note">
         <strong>Seus dados ficam só neste navegador</strong>
         <p>Os dados são guardados localmente neste navegador e neste dispositivo, isto é: acessar o site por outro

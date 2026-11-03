@@ -77,6 +77,7 @@
       id: String(id),
       name: String(name || "").trim().slice(0, MAX_NAME) || "Usuário",
       password: String(password || ""),
+      avatar: "",
       friends: [],
       records: [],
       reviews: [],
@@ -97,11 +98,18 @@
       `Usuário ${index + 1}`;
 
     const password = String(raw.password || "");
+    const avatar =
+      typeof raw.avatar === "string" &&
+      /^data:image\/(jpeg|png|webp);base64,/.test(raw.avatar) &&
+      raw.avatar.length <= 300000
+        ? raw.avatar
+        : "";
 
     return {
       id,
       name,
       password,
+      avatar,
       friends: arr(raw.friends).map((f) => String(f)),
       records: arr(raw.records),
       reviews: arr(raw.reviews),
@@ -392,12 +400,100 @@
     const logged = !!loggedUser();
     $("authPanel").classList.toggle("hidden", logged);
     $("appContent").classList.toggle("hidden", !logged);
+    $("userArea").classList.toggle("hidden", !logged);
   }
 
-  function renderSessionInfo() {
+  /* ---------- Avatar ---------- */
+  function initials(name) {
+    const parts = String(name || "?").trim().split(/\s+/);
+    const first = parts[0]?.[0] || "?";
+    const last = parts.length > 1 ? parts[parts.length - 1][0] : "";
+    return (first + last).toUpperCase();
+  }
+
+  function avatarHTML(account, size = "md") {
+    if (account?.avatar) {
+      return `<span class="avatar ${size}"><img src="${esc(account.avatar)}" alt=""></span>`;
+    }
+    return `<span class="avatar ${size}" aria-hidden="true">${esc(initials(account?.name))}</span>`;
+  }
+
+  // Recorta em quadrado, reduz para 256px e recodifica em JPEG (leve e seguro para o localStorage).
+  function fileToAvatar(file) {
+    return new Promise((resolve, reject) => {
+      if (!/^image\/(png|jpe?g|webp)$/.test(file.type)) return reject(new Error("tipo"));
+      if (file.size > 8 * 1024 * 1024) return reject(new Error("tamanho"));
+
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        const size = 256;
+        const c = document.createElement("canvas");
+        c.width = c.height = size;
+        const ctx = c.getContext("2d");
+        const side = Math.min(img.naturalWidth, img.naturalHeight);
+        const sx = (img.naturalWidth - side) / 2;
+        const sy = (img.naturalHeight - side) / 2;
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, size, size);
+        ctx.drawImage(img, sx, sy, side, side, 0, 0, size, size);
+        URL.revokeObjectURL(url);
+        resolve(c.toDataURL("image/jpeg", 0.85));
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error("imagem"));
+      };
+      img.src = url;
+    });
+  }
+
+  /* ---------- Telas (Dashboard, Meu perfil, Amigos, Conquistas, Suporte) ---------- */
+  const VIEWS = ["dashboard", "perfil", "amigos", "conquistas", "suporte"];
+  let currentView = "dashboard";
+
+  function setView(name) {
+    currentView = VIEWS.includes(name) ? name : "dashboard";
+    render();
+    window.scrollTo({ top: 0 });
+  }
+
+  function renderViews() {
+    VIEWS.forEach((v) => $("view-" + v).classList.toggle("hidden", v !== currentView));
+    document.querySelectorAll("#userMenu [data-view]").forEach((b) => {
+      b.classList.toggle("is-current", b.dataset.view === currentView);
+    });
+  }
+
+  function renderHeader() {
     const me = loggedUser();
     if (!me) return;
-    $("sessionInfo").innerHTML = `<strong>${esc(me.name)}</strong> · ID ${esc(me.id)}`;
+
+    const btn = $("avatarBtn");
+    btn.innerHTML = avatarHTML(me, "sm");
+    btn.setAttribute("aria-label", `Abrir meu perfil (${me.name})`);
+
+    $("menuUser").innerHTML =
+      `${avatarHTML(me, "md")}<div class="menu-user-info"><strong>${esc(me.name)}</strong><span class="muted">ID ${esc(me.id)}</span></div>`;
+
+    const pending = state.requests.filter(
+      (r) => r.toId === me.id && accountById(r.fromId),
+    ).length;
+    $("friendsBadge").textContent = pending;
+    $("friendsBadge").classList.toggle("hidden", !pending);
+    $("menuDot").classList.toggle("hidden", !pending);
+  }
+
+  function renderProfileView() {
+    const me = loggedUser();
+    if (!me) return;
+
+    $("profileAvatar").innerHTML = avatarHTML(me, "xl");
+    $("removePhotoBtn").classList.toggle("hidden", !me.avatar);
+    $("profileIdValue").value = me.id;
+
+    const nameInput = $("profileName");
+    if (document.activeElement !== nameInput) nameInput.value = me.name;
   }
 
   function renderFriendList() {
@@ -413,7 +509,7 @@
       ? list
         .map(
           (friend) =>
-            `<div class="friend-pill"><button class="small" type="button" onclick="window.viewProfile('${esc(friend.id)}')">Ver ${esc(friend.name)} (${esc(friend.id)})</button><button class="small danger" type="button" onclick="window.removeFriend('${esc(friend.id)}')">Remover</button></div>`,
+            `<div class="friend-row">${avatarHTML(friend, "md")}<div class="friend-info"><strong>${esc(friend.name)}</strong><span class="muted">ID ${esc(friend.id)}</span></div><div class="request-actions"><button class="small primary" type="button" onclick="window.viewProfile('${esc(friend.id)}')">Ver dashboard</button><button class="small danger" type="button" onclick="window.removeFriend('${esc(friend.id)}')">Remover</button></div></div>`,
         )
         .join("")
       : '<div class="muted">Nenhuma amizade adicionada ainda.</div>';
@@ -561,6 +657,7 @@
 
     state.session.loggedInId = account.id;
     state.activeId = account.id;
+    currentView = "dashboard";
     save();
     return true;
   }
@@ -580,6 +677,7 @@
     state.accounts.push(blankAccount(name, password, id));
     state.session.loggedInId = id;
     state.activeId = id;
+    currentView = "dashboard";
 
     e.target.reset();
     save();
@@ -601,13 +699,14 @@
     e.target.reset();
   });
 
-  $("logoutBtn").addEventListener("click", () => {
+  function logout() {
     state.session.loggedInId = null;
     state.activeId = null;
+    currentView = "dashboard";
     lastUserSearch = "";
     searchResults = [];
     save();
-  });
+  }
 
   function sendFriendRequestTo(friendId) {
     const me = loggedUser();
@@ -657,6 +756,7 @@
     if (!canViewProfile(me.id, profileId, state.accounts)) return;
 
     state.activeId = profileId;
+    currentView = "dashboard";
     save();
   };
 
@@ -719,6 +819,7 @@
 
   document.querySelectorAll("[data-tab]").forEach((b) =>
     b.addEventListener("click", () => {
+      b.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
       document
         .querySelectorAll("[data-tab]")
         .forEach((x) => x.classList.toggle("active", x === b));
@@ -821,6 +922,12 @@
     alert("Metas atualizadas!");
   });
 
+  // 2026-11-03 -> 03/11/2026 (só na exibição; os dados continuam em AAAA-MM-DD)
+  function fmtDate(d) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(d || ""));
+    return m ? `${m[3]}/${m[2]}/${m[1]}` : String(d || "");
+  }
+
   function weekStart(d) {
     const x = new Date(d + "T12:00:00");
     x.setDate(x.getDate() - ((x.getDay() + 6) % 7));
@@ -840,7 +947,9 @@
 
     const profile = viewedUser() || owner;
 
-    renderSessionInfo();
+    renderViews();
+    renderHeader();
+    renderProfileView();
     renderFriendList();
     renderFriendRequests();
     renderSearchResults();
@@ -896,7 +1005,7 @@
     const max = Math.max(5, ...vals);
     const left = 30;
     const bottom = 175;
-    const top = 15;
+    const top = 26;
     const usable = w - left - 12;
 
     ctx.font = "11px system-ui";
@@ -961,10 +1070,10 @@
       .slice(0, 6);
 
     $("recent").innerHTML = list.length
-      ? `<div class="table-wrap"><table><thead><tr><th>Data</th><th>Disciplina / assunto</th><th>Resultado</th><th>Dificuldade</th></tr></thead><tbody>${list
+      ? `<div class="table-wrap"><table class="rtable"><thead><tr><th>Data</th><th>Disciplina / assunto</th><th>Resultado</th><th>Dificuldade</th></tr></thead><tbody>${list
         .map(
           (r) =>
-            `<tr><td>${esc(r.date)}</td><td><b>${esc(r.subject)}</b><br>${esc(r.topic)}</td><td>${r.correct}/${r.total} (${pct(r.correct, r.total)}%)</td><td>${esc(r.error || "—")}</td></tr>`,
+            `<tr><td data-label="Data">${esc(fmtDate(r.date))}</td><td class="cell-main"><b>${esc(r.subject)}</b><br>${esc(r.topic)}</td><td data-label="Resultado">${r.correct}/${r.total} (${pct(r.correct, r.total)}%)</td><td data-label="Dificuldade">${esc(r.error || "—")}</td></tr>`,
         )
         .join("")}</tbody></table></div>`
       : '<div class="empty">Ainda não há registros. Comece pela aba “Registrar questões”.</div>';
@@ -977,7 +1086,7 @@
       ? list
         .map(
           (r) =>
-            `<div style="display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line);opacity:${r.done ? 0.55 : 1}"><input type="checkbox" style="width:auto;margin-top:4px" ${r.done ? "checked" : ""} ${canEdit ? `onchange=\"window.toggleReview('${esc(r.id)}',this.checked)\"` : "disabled"}><div style="flex:1"><b>${esc(r.topic)}</b><div class="muted">${esc(r.subject)} · ${esc(r.type)} · ${esc(r.date)}</div></div>${canEdit ? `<button class=\"small danger\" onclick=\"window.removeReview('${esc(r.id)}')\">Excluir</button>` : ""}</div>`,
+            `<div style="display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line);opacity:${r.done ? 0.55 : 1}"><input type="checkbox" style="width:auto;margin-top:4px" ${r.done ? "checked" : ""} ${canEdit ? `onchange=\"window.toggleReview('${esc(r.id)}',this.checked)\"` : "disabled"}><div style="flex:1"><b>${esc(r.topic)}</b><div class="muted">${esc(r.subject)} · ${esc(r.type)} · ${esc(fmtDate(r.date))}</div></div>${canEdit ? `<button class=\"small danger\" onclick=\"window.removeReview('${esc(r.id)}')\">Excluir</button>` : ""}</div>`,
         )
         .join("")
       : '<div class="empty">Nenhuma revisão agendada.</div>';
@@ -1043,10 +1152,10 @@
     const list = [...profile.mocks].sort((x, y) => y.date.localeCompare(x.date));
 
     $("mockList").innerHTML = list.length
-      ? `<div class="table-wrap"><table><thead><tr><th>Data</th><th>Simulado</th><th>Resultado</th><th>Tempo</th><th></th></tr></thead><tbody>${list
+      ? `<div class="table-wrap"><table class="rtable"><thead><tr><th>Data</th><th>Simulado</th><th>Resultado</th><th>Tempo</th><th></th></tr></thead><tbody>${list
         .map(
           (m) =>
-            `<tr><td>${esc(m.date)}</td><td><b>${esc(m.name)}</b><br><span class="muted">${esc(m.notes)}</span></td><td><b>${pct(m.correct, m.total)}%</b><br>${m.correct}/${m.total}</td><td>${m.minutes ? m.minutes + " min" : "—"}</td><td>${canEdit ? `<button class=\"small danger\" onclick=\"window.removeMock('${esc(m.id)}')\">Excluir</button>` : ""}</td></tr>`,
+            `<tr><td data-label="Data">${esc(fmtDate(m.date))}</td><td class="cell-main"><b>${esc(m.name)}</b><br><span class="muted">${esc(m.notes)}</span></td><td data-label="Resultado"><span><b>${pct(m.correct, m.total)}%</b> · ${m.correct}/${m.total}</span></td><td data-label="Tempo">${m.minutes ? m.minutes + " min" : "—"}</td><td class="cell-actions">${canEdit ? `<button class=\"small danger\" onclick=\"window.removeMock('${esc(m.id)}')\">Excluir</button>` : ""}</td></tr>`,
         )
         .join("")}</tbody></table></div>`
       : '<div class="empty">Seus simulados aparecerão aqui.</div>';
@@ -1150,10 +1259,110 @@
         id: me.id,
         name: me.name,
         password: me.password,
+        avatar: me.avatar,
         friends: me.friends,
       });
       save();
     }
+  });
+
+  /* ---------- Menu do usuário ---------- */
+  const menuBtn = $("menuBtn");
+  const userMenu = $("userMenu");
+
+  function openMenu(open) {
+    userMenu.classList.toggle("hidden", !open);
+    menuBtn.setAttribute("aria-expanded", String(open));
+  }
+
+  menuBtn.addEventListener("click", () => {
+    openMenu(userMenu.classList.contains("hidden"));
+  });
+
+  document.addEventListener("click", (e) => {
+    if (userMenu.classList.contains("hidden")) return;
+    if (userMenu.contains(e.target) || menuBtn.contains(e.target)) return;
+    openMenu(false);
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !userMenu.classList.contains("hidden")) {
+      openMenu(false);
+      menuBtn.focus();
+    }
+  });
+
+  userMenu.querySelectorAll("[data-view]").forEach((b) =>
+    b.addEventListener("click", () => {
+      openMenu(false);
+      setView(b.dataset.view);
+    }),
+  );
+
+  $("menuLogout").addEventListener("click", () => {
+    openMenu(false);
+    logout();
+  });
+
+  $("avatarBtn").addEventListener("click", () => {
+    openMenu(false);
+    setView("perfil");
+  });
+
+  /* ---------- Perfil: foto, nome e ID ---------- */
+  $("changePhotoBtn").addEventListener("click", () => $("avatarInput").click());
+
+  $("avatarInput").addEventListener("change", async (e) => {
+    const file = e.target.files[0];
+    e.target.value = "";
+    if (!file || !loggedUser()) return;
+
+    try {
+      loggedUser().avatar = await fileToAvatar(file);
+      save();
+    } catch (err) {
+      const msg =
+        err.message === "tipo"
+          ? "Use uma imagem JPG, PNG ou WebP."
+          : err.message === "tamanho"
+            ? "A imagem é grande demais (máximo de 8 MB)."
+            : "Não foi possível ler essa imagem.";
+      alert(msg);
+    }
+  });
+
+  $("removePhotoBtn").addEventListener("click", () => {
+    const me = loggedUser();
+    if (!me || !me.avatar) return;
+    me.avatar = "";
+    save();
+  });
+
+  $("profileForm").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const me = loggedUser();
+    if (!me) return;
+
+    const name = $("profileName").value.trim().slice(0, MAX_NAME);
+    if (!name) return alert("Informe um nome de exibição.");
+
+    me.name = name;
+    save();
+    alert("Nome atualizado!");
+  });
+
+  $("copyIdBtn").addEventListener("click", async () => {
+    const input = $("profileIdValue");
+    try {
+      await navigator.clipboard.writeText(input.value);
+    } catch (err) {
+      input.select();
+      document.execCommand("copy");
+    }
+    const b = $("copyIdBtn");
+    const old = b.textContent;
+    b.textContent = "Copiado!";
+    setTimeout(() => (b.textContent = old), 1500);
   });
 
   const themeBtn = $("themeBtn");
@@ -1165,6 +1374,8 @@
   function paintThemeBtn() {
     themeBtn.textContent =
       currentTheme() === "dark" ? "☀ Modo dia" : "☾ Modo noite";
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.content = currentTheme() === "dark" ? "#241d4a" : "#0f0e17";
   }
 
   themeBtn.addEventListener("click", () => {

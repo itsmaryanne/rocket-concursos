@@ -30,21 +30,56 @@
       </div>
     </header>
     <main>
-      <div class="person-switch" id="personSwitch" aria-label="Selecionar estudante"></div>
-      <form id="studentForm" class="student-form hidden">
-        <input id="stName" maxlength="30" placeholder="Nome do estudante" aria-label="Nome do estudante"
-          autocomplete="off" required>
-        <button class="primary" type="submit">Adicionar</button>
-        <button type="button" id="stCancel">Cancelar</button>
-      </form>
-      <div class="tabs" role="tablist">
+      <section id="authPanel" class="grid auth-panel hidden">
+        <div class="card span-6">
+          <h2>Criar perfil</h2>
+          <p class="muted">Seu ID de acesso será gerado automaticamente com 5 números.</p>
+          <form id="registerForm" class="form-grid">
+            <div class="field full"><label for="regName">Nome de exibição</label><input id="regName" maxlength="30"
+                placeholder="Ex.: Ana Souza" required></div>
+            <div class="field full"><label for="regPassword">Senha (mínimo 7 caracteres)</label><input id="regPassword"
+                type="password" minlength="7" required></div>
+            <div class="field full"><button class="primary" type="submit">Criar perfil e entrar</button></div>
+          </form>
+        </div>
+        <div class="card span-6">
+          <h2>Entrar no perfil</h2>
+          <p class="muted">Use sua ID de 5 números e sua senha para acessar.</p>
+          <form id="loginForm" class="form-grid">
+            <div class="field full"><label for="loginId">ID do perfil</label><input id="loginId" inputmode="numeric"
+                pattern="\d{5}" maxlength="5" placeholder="Ex.: 04219" required></div>
+            <div class="field full"><label for="loginPassword">Senha</label><input id="loginPassword" type="password"
+                required></div>
+            <div class="field full"><button class="primary" type="submit">Entrar</button></div>
+          </form>
+        </div>
+      </section>
+
+      <section id="appContent" class="hidden">
+        <div class="card social-card">
+          <div class="social-head">
+            <div id="sessionInfo" class="muted"></div>
+            <button id="logoutBtn" class="small" type="button">Sair</button>
+          </div>
+          <form id="friendForm" class="friend-form">
+            <input id="friendId" inputmode="numeric" pattern="\d{5}" maxlength="5" placeholder="ID de amigo (5 dígitos)"
+              aria-label="ID de amigo" required>
+            <button class="primary" type="submit">Adicionar amizade</button>
+          </form>
+          <div id="friendList" class="person-switch" aria-label="Lista de amigos"></div>
+        </div>
+
+        <div class="person-switch" id="personSwitch" aria-label="Selecionar perfil para visualização"></div>
+        <div id="viewModeNotice" class="notice hidden"></div>
+
+        <div class="tabs" role="tablist">
         <button class="active" data-tab="visao">Visão geral</button>
         <button data-tab="registro">Registrar questões</button>
         <button data-tab="revisoes">Revisões</button>
         <button data-tab="dificuldades">Dificuldades</button>
         <button data-tab="simulados">Simulados</button>
         <button data-tab="metas">Metas</button>
-      </div>
+        </div>
       <section id="visao" class="panel">
         <div style="margin-bottom:18px">
           <h1>Seu progresso, sem complicação.</h1>
@@ -221,9 +256,8 @@
       </div>
       <div class="actions" style="margin-top:10px"><button class="small" id="exportBtn">Exportar backup</button><button
           class="small" id="importBtn">Importar backup</button><input id="importFile" type="file"
-          accept="application/json" class="hidden"><button class="small" id="renameBtn">Renomear
-          estudante</button><button class="small danger" id="removeBtn">Remover estudante</button><button
-          class="small danger" id="clearBtn">Apagar dados deste estudante</button></div>
+          accept="application/json" class="hidden"><button class="small danger" id="clearBtn">Apagar meus dados</button></div>
+      </section>
     </main>
   </div>
   <script src="app.js"></script>

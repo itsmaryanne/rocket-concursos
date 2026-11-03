@@ -87,6 +87,41 @@ main {
   margin: 0 0 20px;
 }
 
+.auth-panel {
+  margin-bottom: 20px;
+}
+
+.social-card {
+  margin-bottom: 16px;
+}
+
+.social-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.friend-form {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.friend-form input {
+  flex: 1;
+  min-width: 200px;
+}
+
+.friend-pill {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
 button,
 input,
 select,

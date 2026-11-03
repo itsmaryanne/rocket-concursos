@@ -39,6 +39,7 @@ https://itsmaryanne.github.io/rocket-concursos/
 
 ## Estrutura do projeto
 
+```text
 rocket-concursos/
 ├── index.html
 ├── css/

@@ -47,6 +47,7 @@ rocket-concursos/
 ├── js/
 │   └── app.js
 └── README.md
+```
 
 ## Contribuição
 

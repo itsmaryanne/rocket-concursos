@@ -113,6 +113,21 @@
     };
   }
 
+  function sanitizeRequest(req, byId) {
+    const raw = req && typeof req === "object" ? req : {};
+    const fromId = String(raw.fromId || "");
+    const toId = String(raw.toId || "");
+    if (!byId.has(fromId) || !byId.has(toId) || fromId === toId) return null;
+    if (String(raw.status || "pending") !== "pending") return null;
+    return {
+      id: typeof raw.id === "string" && raw.id ? raw.id : uid(),
+      fromId,
+      toId,
+      status: "pending",
+      createdAt: String(raw.createdAt || today()),
+    };
+  }
+
   function normalizeV3(raw) {
     const source = raw && typeof raw === "object" ? raw : {};
     const accounts = [];
@@ -142,6 +157,28 @@
       a.friends = unique;
     });
 
+    // Garante amizade bidirecional para evitar estado inconsistente.
+    accounts.forEach((a) => {
+      a.friends.forEach((friendId) => {
+        const friend = byId.get(friendId);
+        if (friend && !friend.friends.includes(a.id)) {
+          friend.friends.push(a.id);
+        }
+      });
+    });
+
+    const requestMap = new Map();
+    arr(source.requests).forEach((req) => {
+      const s = sanitizeRequest(req, byId);
+      if (!s) return;
+      const key = [s.fromId, s.toId].sort().join("|");
+      if (requestMap.has(key)) return;
+      const from = byId.get(s.fromId);
+      if (from && from.friends.includes(s.toId)) return;
+      requestMap.set(key, s);
+    });
+    const requests = [...requestMap.values()];
+
     const loggedInId = accounts.some((a) => a.id === source.session?.loggedInId)
       ? source.session.loggedInId
       : null;
@@ -161,6 +198,7 @@
       activeId,
       session: { loggedInId },
       accounts,
+      requests,
     };
   }
 
@@ -272,6 +310,8 @@
   }
 
   let migrationCredentials = [];
+  let lastUserSearch = "";
+  let searchResults = [];
   let state = (() => {
     const loaded = load();
     migrationCredentials = loaded.credentials;
@@ -289,6 +329,21 @@
 
   function accountById(id) {
     return state.accounts.find((a) => a.id === id) || null;
+  }
+
+  function areFriends(idA, idB) {
+    const a = accountById(idA);
+    return !!a && a.friends.includes(idB);
+  }
+
+  function findPendingRequest(fromId, toId) {
+    return (
+      state.requests.find((r) => r.fromId === fromId && r.toId === toId) || null
+    );
+  }
+
+  function removeRequest(id) {
+    state.requests = state.requests.filter((r) => r.id !== id);
   }
 
   function loggedUser() {
@@ -362,6 +417,93 @@
         )
         .join("")
       : '<div class="muted">Nenhuma amizade adicionada ainda.</div>';
+  }
+
+  function findUsers(query) {
+    const q = String(query || "").trim();
+    if (!q) return [];
+    const me = loggedUser();
+    if (!me) return [];
+
+    const asId = digits(q);
+    if (isValidProfileId(asId)) {
+      const byId = accountById(asId);
+      return byId && byId.id !== me.id ? [byId] : [];
+    }
+
+    const qLower = q.toLowerCase();
+    return state.accounts
+      .filter((u) => u.id !== me.id)
+      .filter((u) => u.name.toLowerCase().includes(qLower))
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .slice(0, 8);
+  }
+
+  function requestStateFor(meId, targetId) {
+    if (areFriends(meId, targetId)) return "friend";
+    if (findPendingRequest(meId, targetId)) return "outgoing";
+    if (findPendingRequest(targetId, meId)) return "incoming";
+    return "none";
+  }
+
+  function renderSearchResults() {
+    const me = loggedUser();
+    if (!me) return;
+
+    const box = $("friendSearchResults");
+    if (!lastUserSearch) {
+      box.innerHTML = "";
+      return;
+    }
+
+    if (!searchResults.length) {
+      box.innerHTML = '<div class="empty">Nenhum usuário encontrado para essa busca.</div>';
+      return;
+    }
+
+    box.innerHTML = searchResults
+      .map((u) => {
+        const rel = requestStateFor(me.id, u.id);
+        let action = `<button class="small primary" type="button" onclick="window.sendFriendRequest('${esc(u.id)}')">Enviar pedido</button>`;
+        if (rel === "friend") action = '<span class="muted">Já é seu amigo</span>';
+        if (rel === "outgoing") action = '<span class="muted">Pedido enviado</span>';
+        if (rel === "incoming") action = '<span class="muted">Esse usuário já te enviou pedido</span>';
+        return `<div class="request-item"><div class="request-head"><strong>${esc(u.name)}</strong><span class="muted">ID ${esc(u.id)}</span></div><div class="request-actions">${action}</div></div>`;
+      })
+      .join("");
+  }
+
+  function renderFriendRequests() {
+    const me = loggedUser();
+    if (!me) return;
+
+    const incoming = state.requests
+      .filter((r) => r.toId === me.id)
+      .map((r) => ({ req: r, user: accountById(r.fromId) }))
+      .filter((x) => x.user);
+
+    const outgoing = state.requests
+      .filter((r) => r.fromId === me.id)
+      .map((r) => ({ req: r, user: accountById(r.toId) }))
+      .filter((x) => x.user);
+
+    $("incomingRequests").innerHTML = incoming.length
+      ? incoming
+        .map(
+          ({ req, user }) =>
+            `<div class="request-item"><div class="request-head"><strong>${esc(user.name)}</strong><span class="muted">ID ${esc(user.id)}</span></div><div class="request-actions"><button class="small primary" type="button" onclick="window.acceptFriendRequest('${esc(req.id)}')">Aceitar</button><button class="small danger" type="button" onclick="window.rejectFriendRequest('${esc(req.id)}')">Recusar</button></div></div>`,
+        )
+        .join("")
+      : '<div class="muted">Sem pedidos recebidos.</div>';
+
+    $("outgoingRequests").innerHTML = outgoing.length
+      ? outgoing
+        .map(
+          ({ req, user }) =>
+            `<div class="request-item"><div class="request-head"><strong>${esc(user.name)}</strong><span class="muted">ID ${esc(user.id)}</span></div><div class="request-actions"><button class="small danger" type="button" onclick="window.cancelFriendRequest('${esc(req.id)}')">Cancelar pedido</button></div></div>`,
+        )
+        .join("")
+      : '<div class="muted">Sem pedidos enviados.</div>';
   }
 
   function renderPeople() {
@@ -462,28 +604,36 @@
   $("logoutBtn").addEventListener("click", () => {
     state.session.loggedInId = null;
     state.activeId = null;
+    lastUserSearch = "";
+    searchResults = [];
     save();
   });
 
-  function addFriendById(friendId) {
+  function sendFriendRequestTo(friendId) {
     const me = loggedUser();
     if (!me) return;
 
     const id = digits(friendId).slice(0, PROFILE_ID_SIZE);
 
-    if (!isValidProfileId(id)) return alert("Informe uma ID válida com 5 números.");
-    if (id === me.id) return alert("Você não pode adicionar seu próprio perfil.");
+    if (!isValidProfileId(id)) return alert("Informe um ID válido com 5 números.");
+    if (id === me.id) return alert("Você não pode enviar pedido para si mesmo.");
 
-    const friend = accountById(id);
-    if (!friend) return alert("Nenhum perfil encontrado com essa ID.");
+    const target = accountById(id);
+    if (!target) return alert("Nenhum perfil encontrado com esse ID.");
 
-    if (me.friends.includes(friend.id)) {
-      return alert("Esse perfil já está na sua lista de amizades.");
-    }
+    if (areFriends(me.id, target.id)) return alert("Esse usuário já é seu amigo.");
+    if (findPendingRequest(me.id, target.id)) return alert("Você já enviou um pedido para este usuário.");
+    if (findPendingRequest(target.id, me.id)) return alert("Este usuário já te enviou um pedido. Aceite na caixa de pedidos recebidos.");
 
-    me.friends.push(friend.id);
-    if (!friend.friends.includes(me.id)) friend.friends.push(me.id);
+    state.requests.push({
+      id: uid(),
+      fromId: me.id,
+      toId: target.id,
+      status: "pending",
+      createdAt: today(),
+    });
     save();
+    alert("Pedido de amizade enviado.");
   }
 
   window.removeFriend = (friendId) => {
@@ -510,10 +660,61 @@
     save();
   };
 
-  $("friendForm").addEventListener("submit", (e) => {
+  window.sendFriendRequest = (profileId) => {
+    sendFriendRequestTo(profileId);
+  };
+
+  window.acceptFriendRequest = (requestId) => {
+    const me = loggedUser();
+    if (!me) return;
+    const req = state.requests.find((r) => r.id === requestId && r.toId === me.id);
+    if (!req) return;
+
+    const from = accountById(req.fromId);
+    const to = accountById(req.toId);
+    if (!from || !to) {
+      removeRequest(req.id);
+      save();
+      return;
+    }
+
+    if (!from.friends.includes(to.id)) from.friends.push(to.id);
+    if (!to.friends.includes(from.id)) to.friends.push(from.id);
+
+    state.requests = state.requests.filter(
+      (r) =>
+        !(
+          (r.fromId === from.id && r.toId === to.id) ||
+          (r.fromId === to.id && r.toId === from.id)
+        ),
+    );
+    save();
+  };
+
+  window.rejectFriendRequest = (requestId) => {
+    const me = loggedUser();
+    if (!me) return;
+    const req = state.requests.find((r) => r.id === requestId && r.toId === me.id);
+    if (!req) return;
+    removeRequest(req.id);
+    save();
+  };
+
+  window.cancelFriendRequest = (requestId) => {
+    const me = loggedUser();
+    if (!me) return;
+    const req = state.requests.find((r) => r.id === requestId && r.fromId === me.id);
+    if (!req) return;
+    removeRequest(req.id);
+    save();
+  };
+
+  $("friendSearchForm").addEventListener("submit", (e) => {
     e.preventDefault();
-    addFriendById($("friendId").value);
-    e.target.reset();
+    const query = $("friendQuery").value.trim();
+    lastUserSearch = query;
+    searchResults = findUsers(query);
+    renderSearchResults();
   });
 
   document.querySelectorAll("[data-tab]").forEach((b) =>
@@ -641,6 +842,8 @@
 
     renderSessionInfo();
     renderFriendList();
+    renderFriendRequests();
+    renderSearchResults();
     renderPeople();
     setEditMode();
 

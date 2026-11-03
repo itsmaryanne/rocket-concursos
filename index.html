@@ -61,11 +61,22 @@
             <div id="sessionInfo" class="muted"></div>
             <button id="logoutBtn" class="small" type="button">Sair</button>
           </div>
-          <form id="friendForm" class="friend-form">
-            <input id="friendId" inputmode="numeric" pattern="\d{5}" maxlength="5" placeholder="ID de amigo (5 dígitos)"
-              aria-label="ID de amigo" required>
-            <button class="primary" type="submit">Adicionar amizade</button>
+          <form id="friendSearchForm" class="friend-form">
+            <input id="friendQuery" maxlength="30" placeholder="Buscar por nome ou ID (5 dígitos)"
+              aria-label="Buscar usuários" required>
+            <button class="primary" type="submit">Buscar</button>
           </form>
+          <div id="friendSearchResults" class="request-list"></div>
+          <div class="request-grid">
+            <div>
+              <h3>Pedidos recebidos</h3>
+              <div id="incomingRequests" class="request-list"></div>
+            </div>
+            <div>
+              <h3>Pedidos enviados</h3>
+              <div id="outgoingRequests" class="request-list"></div>
+            </div>
+          </div>
           <div id="friendList" class="person-switch" aria-label="Lista de amigos"></div>
         </div>
 

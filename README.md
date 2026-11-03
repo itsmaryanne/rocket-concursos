@@ -10,14 +10,13 @@ A proposta é oferecer ferramentas que permitam visualizar o progresso individua
 
 ## Funcionalidades
 
-- [X] Organização de matérias e conteúdos
-- [X] Registro de sessões de estudo
-- [X] Acompanhamento de desempenho
-- [X] Controle de revisões
-- [X] Identificação de dificuldades
-- [X] Registro de simulados
-- [X] Definição e acompanhamento de metas
-- [ ] Gráficos de evolução
+- Organização de matérias e conteúdos
+- Registro de sessões de estudo
+- Acompanhamento de desempenho
+- Controle de revisões
+- Identificação de dificuldades
+- Registro de simulados
+- Definição e acompanhamento de metas
 
 ## Tecnologias utilizadas
 

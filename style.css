@@ -789,6 +789,216 @@ button:disabled {
   flex: 1;
 }
 
+.pager {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 14px;
+}
+
+.streak-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.streak-grid {
+  overflow-x: auto;
+  overflow-y: clip;
+}
+
+.streak-board {
+  display: grid;
+  grid-template-columns: 36px max-content;
+  grid-template-rows: 20px max-content;
+  gap: 6px 8px;
+  min-width: fit-content;
+}
+
+.streak-corner {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.streak-months {
+  grid-column: 2;
+  grid-row: 1;
+  display: grid;
+  grid-template-columns: repeat(52, 12px);
+  column-gap: 4px;
+  align-items: end;
+  font-size: 12px;
+  color: var(--muted);
+  text-transform: capitalize;
+}
+
+.streak-month {
+  white-space: nowrap;
+}
+
+.streak-weekdays {
+  grid-column: 1;
+  grid-row: 2;
+  display: grid;
+  grid-template-rows: repeat(7, 12px);
+  row-gap: 4px;
+  font-size: 12px;
+  color: var(--muted);
+  align-items: center;
+  justify-items: start;
+}
+
+.streak-weekday {
+  line-height: 1;
+}
+
+.streak-cells {
+  grid-column: 2;
+  grid-row: 2;
+  display: grid;
+  grid-auto-flow: column;
+  grid-template-rows: repeat(7, 1fr);
+  grid-template-columns: repeat(52, 12px);
+  gap: 4px;
+}
+
+.streak-day {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  background: var(--line);
+  opacity: .45;
+}
+
+.streak-day.active {
+  background: var(--primary);
+  opacity: 1;
+}
+
+@media (max-width: 640px) {
+  .streak-board {
+    grid-template-columns: 30px max-content;
+  }
+
+  .streak-months,
+  .streak-weekdays {
+    font-size: 11px;
+  }
+}
+
+.general-records {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.general-record {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--field);
+  padding: 10px;
+}
+
+.record-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 3px;
+}
+
+.record-type {
+  display: inline-block;
+  border: 1px solid var(--line);
+  border-radius: 99px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--card);
+}
+
+@media (max-width: 640px) {
+  .general-record {
+    flex-direction: column;
+  }
+
+  .general-record button {
+    align-self: flex-end;
+  }
+}
+
+.mock-note-wrap {
+  margin-top: 2px;
+  min-width: 0;
+}
+
+.mock-note {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mock-note.expanded {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  overflow-wrap: anywhere;
+}
+
+.mock-note-toggle {
+  border: 0;
+  background: transparent;
+  color: var(--primary);
+  padding: 0;
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.mock-note-toggle:hover {
+  text-decoration: underline;
+}
+
+.rtable-mocks {
+  table-layout: fixed;
+}
+
+.rtable-mocks th:nth-child(1),
+.rtable-mocks td:nth-child(1) {
+  width: 122px;
+}
+
+.rtable-mocks th:nth-child(3),
+.rtable-mocks td:nth-child(3) {
+  width: 140px;
+}
+
+.rtable-mocks th:nth-child(4),
+.rtable-mocks td:nth-child(4) {
+  width: 90px;
+}
+
+.rtable-mocks th:nth-child(5),
+.rtable-mocks td:nth-child(5) {
+  width: 88px;
+}
+
+.rtable-mocks td.cell-main {
+  max-width: 0;
+  min-width: 0;
+}
+
 .view > .grid,
 .view > .card + .grid,
 .view > .grid + .card {
@@ -797,6 +1007,10 @@ button:disabled {
 
 .view > .card {
   margin-top: 14px;
+}
+
+#viewModeNotice {
+  margin-bottom: 14px;
 }
 
 details.faq {

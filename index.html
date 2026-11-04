@@ -49,6 +49,7 @@
         </div>
       </div>
     </header>
+
     <main>
       <section id="authPanel" class="grid auth-panel hidden">
         <div class="card span-6">
@@ -76,284 +77,327 @@
       </section>
 
       <section id="appContent" class="hidden">
-      <section id="view-dashboard" class="view">
-        <div class="person-switch" id="personSwitch" aria-label="Selecionar perfil para visualização"></div>
-        <div id="viewModeNotice" class="notice hidden"></div>
+        <section id="view-dashboard" class="view">
+          <div class="person-switch" id="personSwitch" aria-label="Selecionar perfil para visualização"></div>
+          <div id="viewModeNotice" class="notice hidden"></div>
 
-        <div class="tabs" role="tablist">
-        <button class="active" data-tab="visao">Visão geral</button>
-        <button data-tab="registro">Registrar questões</button>
-        <button data-tab="revisoes">Revisões</button>
-        <button data-tab="dificuldades">Dificuldades</button>
-        <button data-tab="simulados">Simulados</button>
-        <button data-tab="metas">Metas</button>
-        </div>
-      <section id="visao" class="panel">
-        <div style="margin-bottom:18px">
-          <h1>Seu progresso, sem complicação.</h1>
-          <p class="muted">Registre o que estudou, acompanhe sua evolução e descubra onde vale investir mais tempo.</p>
-        </div>
-        <div class="grid">
-          <div class="card span-3">
-            <div class="metric" id="mQuestions">0</div>
-            <div class="metric-label">Questões resolvidas</div>
+          <div class="tabs" role="tablist">
+            <button class="active" data-tab="visao">Visão geral</button>
+            <button data-tab="registro">Registrar questões</button>
+            <button data-tab="revisoes">Revisões</button>
+            <button data-tab="dificuldades">Dificuldades</button>
+            <button data-tab="simulados">Simulados</button>
+            <button data-tab="metas">Metas</button>
+            <button data-tab="registros">Registros gerais</button>
           </div>
-          <div class="card span-3">
-            <div class="metric" id="mAccuracy">—</div>
-            <div class="metric-label">Taxa geral de acertos</div>
-          </div>
-          <div class="card span-3">
-            <div class="metric" id="mSessions">0</div>
-            <div class="metric-label">Registros de estudo</div>
-          </div>
-          <div class="card span-3">
-            <div class="metric" id="mReviews">0</div>
-            <div class="metric-label">Revisões pendentes</div>
-          </div>
-          <div class="card span-7">
-            <h2>Evolução dos últimos 7 dias</h2><canvas id="trend" class="chart"
-              aria-label="Gráfico de evolução"></canvas>
-            <div class="legend"><span><i class="dot"></i>Acertos por dia</span></div>
-          </div>
-          <div class="card span-5">
-            <h2>Desempenho por disciplina</h2>
-            <div id="subjectBars"></div>
-          </div>
-          <div class="card span-12">
-            <h2>Últimos registros</h2>
-            <div id="recent"></div>
-          </div>
-        </div>
-      </section>
-      <section id="registro" class="panel hidden">
-        <h1>Registrar questões</h1>
-        <p class="muted">Preencha somente o essencial. O painel calcula o aproveitamento automaticamente.</p>
-        <div class="card">
-          <form id="recordForm" class="form-grid">
-            <div class="field"><label for="rDate">Data</label><input id="rDate" type="date" required></div>
-            <div class="field"><label for="rSubject">Disciplina</label><select id="rSubject" required></select></div>
-            <div class="field"><label for="rTopic">Assunto</label><input id="rTopic"
-                placeholder="Ex.: interpretação de texto" required></div>
-            <div class="field"><label for="rSource">Origem / banca (opcional)</label><input id="rSource"
-                placeholder="Ex.: Cebraspe, FGV, questões avulsas"></div>
-            <div class="field"><label for="rTotal">Questões resolvidas</label><input id="rTotal" type="number" min="1"
-                value="20" required></div>
-            <div class="field"><label for="rCorrect">Acertos</label><input id="rCorrect" type="number" min="0"
-                value="14" required></div>
-            <div class="field"><label for="rDifficulty">Como foi?</label><select id="rDifficulty">
-                <option value="ok">Tranquilo</option>
-                <option value="medio">Exigiu atenção</option>
-                <option value="dificil">Muito difícil</option>
-              </select></div>
-            <div class="field"><label for="rError">Principal dificuldade</label><select id="rError">
-                <option value="">Não se aplica / não identifiquei</option>
-                <option>Não conhecia o conteúdo</option>
-                <option>Esqueci a regra ou conceito</option>
-                <option>Interpretei errado</option>
-                <option>Confundi alternativas</option>
-                <option>Não soube aplicar o conteúdo</option>
-                <option>Falta de atenção</option>
-              </select></div>
-            <div class="field full"><label for="rNotes">Observação (opcional)</label><textarea id="rNotes"
-                placeholder="O que vale lembrar na próxima revisão?"></textarea></div>
-            <div class="field full">
-              <div class="actions"><button class="primary" type="submit">Salvar registro</button><button
-                  type="reset">Limpar</button></div>
+          <section id="visao" class="panel">
+            <div style="margin-bottom:18px">
+              <h1>Seu progresso, sem complicação.</h1>
+              <p class="muted">Registre o que estudou, acompanhe sua evolução e descubra onde vale investir mais tempo.
+              </p>
             </div>
-          </form>
-        </div>
-      </section>
-      <section id="revisoes" class="panel hidden">
-        <h1>Revisões</h1>
-        <p class="muted">Transforme erros e assuntos difíceis em revisões agendadas. Sugestão: rever após 1, 7 e 30
-          dias.</p>
-        <div class="grid">
-          <div class="card span-5">
-            <h2>Agendar revisão</h2>
-            <form id="reviewForm" class="form-grid">
-              <div class="field full"><label for="vSubject">Disciplina</label><select id="vSubject"></select></div>
-              <div class="field full"><label for="vTopic">Assunto</label><input id="vTopic"
-                  placeholder="Assunto para revisar" required></div>
-              <div class="field"><label for="vDate">Data da revisão</label><input id="vDate" type="date" required></div>
-              <div class="field"><label for="vType">Tipo</label><select id="vType">
-                  <option>Revisão de conteúdo</option>
-                  <option>Refazer questões erradas</option>
-                  <option>Revisão de simulado</option>
-                </select></div>
-              <div class="field full"><button class="primary" type="submit">Agendar revisão</button></div>
-            </form>
-          </div>
-          <div class="card span-7">
-            <h2>Agenda de revisões</h2>
-            <div id="reviewList"></div>
-          </div>
-        </div>
-      </section>
-      <section id="dificuldades" class="panel hidden">
-        <h1>Mapa de dificuldades</h1>
-        <p class="muted">Veja quais assuntos e tipos de erro mais aparecem nos seus registros. Use isso para decidir o
-          próximo estudo.</p>
-        <div class="notice">A taxa de acertos é um sinal, não uma sentença. Um assunto com poucas questões ainda precisa
-          de mais amostra. Priorize dificuldades recorrentes e erros que você ainda não consegue explicar.</div>
-        <div class="grid">
-          <div class="card span-6">
-            <h2>Por tipo de dificuldade</h2>
-            <div id="errorList"></div>
-          </div>
-          <div class="card span-6">
-            <h2>Assuntos que merecem atenção</h2>
-            <div id="weakList"></div>
-          </div>
-        </div>
-      </section>
-      <section id="simulados" class="panel hidden">
-        <h1>Simulados</h1>
-        <p class="muted">Registre o resultado de provas completas ou blocos cronometrados e acompanhe a evolução.</p>
-        <div class="grid">
-          <div class="card span-5">
-            <h2>Novo simulado</h2>
-            <form id="mockForm" class="form-grid">
-              <div class="field"><label for="sDate">Data</label><input id="sDate" type="date" required></div>
-              <div class="field"><label for="sName">Nome / prova</label><input id="sName"
-                  placeholder="Ex.: Simulado geral 01" required></div>
-              <div class="field"><label for="sTotal">Questões</label><input id="sTotal" type="number" min="1" value="60"
-                  required></div>
-              <div class="field"><label for="sCorrect">Acertos</label><input id="sCorrect" type="number" min="0"
-                  value="35" required></div>
-              <div class="field"><label for="sMinutes">Tempo (minutos)</label><input id="sMinutes" type="number" min="0"
-                  placeholder="Ex.: 180"></div>
-              <div class="field full"><label for="sNotes">O que revisar?</label><textarea id="sNotes"
-                  placeholder="Matérias fracas, gestão do tempo, interpretação..."></textarea></div>
-              <div class="field full"><button class="primary" type="submit">Salvar simulado</button></div>
-            </form>
-          </div>
-          <div class="card span-7">
-            <h2>Histórico de simulados</h2>
-            <div id="mockList"></div>
-          </div>
-        </div>
-      </section>
-      <section id="metas" class="panel hidden">
-        <h1>Metas semanais</h1>
-        <p class="muted">Defina uma meta possível para sua rotina. O progresso considera os registros feitos de segunda
-          a domingo.</p>
-        <div class="notice">Uma meta boa é aquela que cabe na vida real. Se a semana ficar apertada, reduza
-          temporariamente a meta e mantenha o hábito. Não acumule sessões perdidas como dívida.</div>
-        <div class="grid">
-          <div class="card span-5">
-            <h2>Configurar meta</h2>
-            <form id="goalForm" class="form-grid">
-              <div class="field full"><label for="gQuestions">Questões por semana</label><input id="gQuestions"
-                  type="number" min="1" value="150"></div>
-              <div class="field full"><label for="gSessions">Sessões por semana</label><input id="gSessions"
-                  type="number" min="1" value="15"></div>
-              <div class="field full"><button class="primary" type="submit">Atualizar metas</button></div>
-            </form>
-          </div>
-          <div class="card span-7">
-            <h2>Progresso desta semana</h2>
-            <div id="goalProgress"></div>
-          </div>
-        </div>
-      </section>
-            </section>
-
-      <section id="view-perfil" class="view hidden">
-        <h1>Meu perfil</h1>
-        <p class="muted">Sua foto e seu nome aparecem para os seus amigos.</p>
-        <div class="grid">
-          <div class="card span-5 profile-card">
-            <div id="profileAvatar"></div>
-            <div class="actions">
-              <button class="primary" id="changePhotoBtn" type="button">Alterar foto</button>
-              <button class="danger" id="removePhotoBtn" type="button">Remover foto</button>
-            </div>
-            <input id="avatarInput" type="file" accept="image/png,image/jpeg,image/webp" class="hidden">
-            <p class="muted">JPG, PNG ou WebP. A foto é recortada em formato quadrado e fica salva só neste navegador.</p>
-          </div>
-          <div class="card span-7">
-            <h2>Dados do perfil</h2>
-            <form id="profileForm" class="form-grid">
-              <div class="field full"><label for="profileName">Como gostaria de ser chamado?</label><input
-                  id="profileName" maxlength="30" required></div>
-              <div class="field full"><label for="profileIdValue">ID do perfil</label>
-                <div class="id-row"><input id="profileIdValue" readonly><button class="small" id="copyIdBtn"
-                    type="button">Copiar ID</button></div>
-                <span class="muted">Compartilhe seu ID para receber pedidos de amizade.</span>
+            <div class="grid">
+              <div class="card span-3">
+                <div class="metric" id="mQuestions">0</div>
+                <div class="metric-label">Questões resolvidas</div>
               </div>
-              <div class="field full"><button class="primary" type="submit">Salvar nome</button></div>
+              <div class="card span-3">
+                <div class="metric" id="mAccuracy">—</div>
+                <div class="metric-label">Taxa geral de acertos</div>
+              </div>
+              <div class="card span-3">
+                <div class="metric" id="mSessions">0</div>
+                <div class="metric-label">Sessões na semana</div>
+              </div>
+              <div class="card span-3">
+                <div class="metric" id="mReviews">0</div>
+                <div class="metric-label">Revisões pendentes</div>
+              </div>
+              <div class="card span-7">
+                <h2>Evolução dos últimos 7 dias</h2><canvas id="trend" class="chart"
+                  aria-label="Gráfico de evolução"></canvas>
+                <div class="legend"><span><i class="dot"></i>Acertos por dia</span></div>
+              </div>
+              <div class="card span-5">
+                <h2>Desempenho por disciplina</h2>
+                <div id="subjectBars"></div>
+              </div>
+              <div class="card span-12">
+                <h2>Últimos registros</h2>
+                <div id="recent"></div>
+              </div>
+              <div class="card span-12">
+                <h2>Streak</h2>
+                <p class="muted">Dia com registro recebe marcação. A cor não muda por quantidade.</p>
+                <div class="streak-head">
+                  <strong id="streakCurrent">0 dia(s) seguidos</strong>
+                  <span class="muted" id="streakTotal">0 dia(s) com registro</span>
+                </div>
+                <div id="streakGrid" class="streak-grid" aria-label="Calendário de consistência"></div>
+              </div>
+            </div>
+          </section>
+          <section id="registro" class="panel hidden">
+            <h1>Registrar questões</h1>
+            <p class="muted">Preencha somente o essencial. O painel calcula o aproveitamento automaticamente.</p>
+            <div class="card">
+              <form id="recordForm" class="form-grid">
+                <div class="field"><label for="rDate">Data</label><input id="rDate" type="date" required></div>
+                <div class="field"><label for="rSubject">Disciplina</label><select id="rSubject" required></select>
+                </div>
+                <div class="field"><label for="rTopic">Assunto</label><input id="rTopic"
+                    placeholder="Ex.: interpretação de texto" required></div>
+                <div class="field"><label for="rSource">Origem / banca (opcional)</label><input id="rSource"
+                    placeholder="Ex.: Cebraspe, FGV, questões avulsas"></div>
+                <div class="field"><label for="rTotal">Questões resolvidas</label><input id="rTotal" type="number"
+                    min="1" value="20" required></div>
+                <div class="field"><label for="rCorrect">Acertos</label><input id="rCorrect" type="number" min="0"
+                    value="14" required></div>
+                <div class="field"><label for="rDifficulty">Como foi?</label><select id="rDifficulty">
+                    <option value="ok">Tranquilo</option>
+                    <option value="medio">Exigiu atenção</option>
+                    <option value="dificil">Muito difícil</option>
+                  </select></div>
+                <div class="field"><label for="rError">Principal dificuldade</label><select id="rError">
+                    <option value="">Não se aplica / não identifiquei</option>
+                    <option>Não conhecia o conteúdo</option>
+                    <option>Esqueci a regra ou conceito</option>
+                    <option>Interpretei errado</option>
+                    <option>Confundi alternativas</option>
+                    <option>Não soube aplicar o conteúdo</option>
+                    <option>Falta de atenção</option>
+                  </select></div>
+                <div class="field full"><label for="rNotes">Observação (opcional)</label><textarea id="rNotes"
+                    placeholder="O que vale lembrar na próxima revisão?"></textarea></div>
+                <div class="field full">
+                  <div class="actions"><button class="primary" type="submit">Salvar registro</button><button
+                      type="reset">Limpar</button></div>
+                </div>
+              </form>
+            </div>
+          </section>
+          <section id="revisoes" class="panel hidden">
+            <h1>Revisões</h1>
+            <p class="muted">Transforme erros e assuntos difíceis em revisões agendadas. Sugestão: rever após 1, 7 e 30
+              dias.</p>
+            <div class="grid">
+              <div class="card span-5">
+                <h2>Agendar revisão</h2>
+                <form id="reviewForm" class="form-grid">
+                  <div class="field full"><label for="vSubject">Disciplina</label><select id="vSubject"></select></div>
+                  <div class="field full"><label for="vTopic">Assunto</label><input id="vTopic"
+                      placeholder="Assunto para revisar" required></div>
+                  <div class="field"><label for="vDate">Data da revisão</label><input id="vDate" type="date" required>
+                  </div>
+                  <div class="field"><label for="vType">Tipo</label><select id="vType">
+                      <option>Revisão de conteúdo</option>
+                      <option>Refazer questões erradas</option>
+                      <option>Revisão de simulado</option>
+                    </select></div>
+                  <div class="field full"><button class="primary" type="submit">Agendar revisão</button></div>
+                </form>
+              </div>
+              <div class="card span-7">
+                <h2>Agenda de revisões</h2>
+                <div id="reviewList"></div>
+              </div>
+            </div>
+          </section>
+          <section id="registros" class="panel hidden">
+            <h1>Registros gerais</h1>
+            <p class="muted">Todos os registros do aluno em um só lugar. Você pode excluir qualquer item.</p>
+            <div class="card">
+              <div id="generalRecordList"></div>
+            </div>
+          </section>
+          <section id="dificuldades" class="panel hidden">
+            <h1>Mapa de dificuldades</h1>
+            <p class="muted">Veja quais assuntos e tipos de erro mais aparecem nos seus registros. Use isso para decidir
+              o
+              próximo estudo.</p>
+            <div class="notice">A taxa de acertos é um sinal, não uma sentença. Um assunto com poucas questões ainda
+              precisa
+              de mais amostra. Priorize dificuldades recorrentes e erros que você ainda não consegue explicar.</div>
+            <div class="grid">
+              <div class="card span-6">
+                <h2>Por tipo de dificuldade</h2>
+                <div id="errorList"></div>
+              </div>
+              <div class="card span-6">
+                <h2>Assuntos que merecem atenção</h2>
+                <div id="weakList"></div>
+              </div>
+            </div>
+          </section>
+          <section id="simulados" class="panel hidden">
+            <h1>Simulados</h1>
+            <p class="muted">Registre o resultado de provas completas ou blocos cronometrados e acompanhe a evolução.
+            </p>
+            <div class="grid">
+              <div class="card span-5">
+                <h2>Novo simulado</h2>
+                <form id="mockForm" class="form-grid">
+                  <div class="field"><label for="sDate">Data</label><input id="sDate" type="date" required></div>
+                  <div class="field"><label for="sName">Nome / prova</label><input id="sName"
+                      placeholder="Ex.: Simulado geral 01" required></div>
+                  <div class="field"><label for="sTotal">Questões</label><input id="sTotal" type="number" min="1"
+                      value="60" required></div>
+                  <div class="field"><label for="sCorrect">Acertos</label><input id="sCorrect" type="number" min="0"
+                      value="35" required></div>
+                  <div class="field"><label for="sMinutes">Tempo (minutos)</label><input id="sMinutes" type="number"
+                      min="0" placeholder="Ex.: 180"></div>
+                  <div class="field full"><label for="sNotes">O que revisar?</label><textarea id="sNotes"
+                      placeholder="Matérias fracas, gestão do tempo, interpretação..."></textarea></div>
+                  <div class="field full"><button class="primary" type="submit">Salvar simulado</button></div>
+                </form>
+              </div>
+              <div class="card span-7">
+                <h2>Histórico de simulados</h2>
+                <div id="mockList"></div>
+              </div>
+            </div>
+          </section>
+          <section id="metas" class="panel hidden">
+            <h1>Metas semanais</h1>
+            <p class="muted">Defina uma meta possível para sua rotina. A meta de questões usa seus registros de questões e a meta de sessões usa somente as sessões cadastradas no formulário abaixo.</p>
+            <div class="notice">Uma meta boa é aquela que cabe na vida real. Se a semana ficar apertada, reduza
+              temporariamente a meta e mantenha o hábito. Não acumule sessões perdidas como dívida.</div>
+            <div class="grid">
+              <div class="card span-5">
+                <h2>Configurar meta</h2>
+                <form id="goalForm" class="form-grid">
+                  <div class="field full"><label for="gQuestions">Questões por semana</label><input id="gQuestions"
+                      type="number" min="1" value="150"></div>
+                  <div class="field full"><label for="gSessions">Sessões por semana</label><input id="gSessions"
+                      type="number" min="1" value="15"></div>
+                  <div class="field full"><button class="primary" type="submit">Atualizar metas</button></div>
+                </form>
+              </div>
+              <div class="card span-7">
+                <h2>Progresso desta semana</h2>
+                <div id="goalProgress"></div>
+              </div>
+              <div class="card span-5">
+                <h2>Registrar sessão de estudo</h2>
+                <form id="sessionForm" class="form-grid">
+                  <div class="field"><label for="sessDate">Data</label><input id="sessDate" type="date" required></div>
+                  <div class="field"><label for="sessMinutes">Duração (minutos)</label><input id="sessMinutes" type="number" min="1" value="50" required></div>
+                  <div class="field full"><label for="sessNotes">Observação (opcional)</label><input id="sessNotes" maxlength="120" placeholder="Ex.: revisão de constitucional"></div>
+                  <div class="field full"><button class="primary" type="submit">Salvar sessão</button></div>
+                </form>
+              </div>
+              <div class="card span-7">
+                <h2>Sessões registradas</h2>
+                <div id="sessionList"></div>
+              </div>
+            </div>
+          </section>
+        </section>
+        
+
+        <section id="view-perfil" class="view hidden">
+          <h1>Meu perfil</h1>
+          <p class="muted">Sua foto e seu nome aparecem para os seus amigos.</p>
+          <div class="grid">
+            <div class="card span-5 profile-card">
+              <div id="profileAvatar"></div>
+              <div class="actions">
+                <button class="primary" id="changePhotoBtn" type="button">Alterar foto</button>
+                <button class="danger" id="removePhotoBtn" type="button">Remover foto</button>
+              </div>
+              <input id="avatarInput" type="file" accept="image/png,image/jpeg,image/webp" class="hidden">
+              <p class="muted">JPG, PNG ou WebP. A foto é recortada em formato quadrado e fica salva só neste navegador.
+              </p>
+            </div>
+            <div class="card span-7">
+              <h2>Dados do perfil</h2>
+              <form id="profileForm" class="form-grid">
+                <div class="field full"><label for="profileName">Como gostaria de ser chamado?</label><input
+                    id="profileName" maxlength="30" required></div>
+                <div class="field full"><label for="profileIdValue">ID do perfil</label>
+                  <div class="id-row"><input id="profileIdValue" readonly><button class="small" id="copyIdBtn"
+                      type="button">Copiar ID</button></div>
+                  <span class="muted">Compartilhe seu ID para receber pedidos de amizade.</span>
+                </div>
+                <div class="field full"><button class="primary" type="submit">Salvar nome</button></div>
+              </form>
+            </div>
+          </div>
+        </section>
+
+        <section id="view-amigos" class="view hidden">
+          <h1>Amigos</h1>
+          <p class="muted">Busque por nome ou ID, envie pedidos e acompanhe o dashboard de quem aceitar.</p>
+          <div class="card social-card">
+            <form id="friendSearchForm" class="friend-form">
+              <input id="friendQuery" maxlength="30" placeholder="Nome ou ID (5 dígitos)" aria-label="Buscar usuários"
+                required>
+              <button class="primary" type="submit">Buscar</button>
             </form>
+            <div id="friendSearchResults" class="request-list"></div>
           </div>
-        </div>
-      </section>
-
-      <section id="view-amigos" class="view hidden">
-        <h1>Amigos</h1>
-        <p class="muted">Busque por nome ou ID, envie pedidos e acompanhe o dashboard de quem aceitar.</p>
-        <div class="card social-card">
-          <form id="friendSearchForm" class="friend-form">
-            <input id="friendQuery" maxlength="30" placeholder="Nome ou ID (5 dígitos)"
-              aria-label="Buscar usuários" required>
-            <button class="primary" type="submit">Buscar</button>
-          </form>
-          <div id="friendSearchResults" class="request-list"></div>
-        </div>
-        <div class="grid">
-          <div class="card span-6">
-            <h2>Pedidos recebidos</h2>
-            <div id="incomingRequests" class="request-list"></div>
+          <div class="grid">
+            <div class="card span-6">
+              <h2>Pedidos recebidos</h2>
+              <div id="incomingRequests" class="request-list"></div>
+            </div>
+            <div class="card span-6">
+              <h2>Pedidos enviados</h2>
+              <div id="outgoingRequests" class="request-list"></div>
+            </div>
           </div>
-          <div class="card span-6">
-            <h2>Pedidos enviados</h2>
-            <div id="outgoingRequests" class="request-list"></div>
+          <div class="card">
+            <h2>Meus amigos</h2>
+            <div id="friendList" class="friend-list" aria-label="Lista de amigos"></div>
           </div>
-        </div>
-        <div class="card">
-          <h2>Meus amigos</h2>
-          <div id="friendList" class="friend-list" aria-label="Lista de amigos"></div>
-        </div>
-      </section>
+        </section>
 
-      <section id="view-conquistas" class="view hidden">
-        <h1>Conquistas</h1>
-        <p class="muted">Marcos da sua jornada de estudos.</p>
-        <div class="card empty-state">
-          <h2>Em breve</h2>
-          <p class="muted">Aqui vão aparecer as suas conquistas conforme você registra questões, revisões e simulados.</p>
-        </div>
-      </section>
+        <section id="view-conquistas" class="view hidden">
+          <h1>Conquistas</h1>
+          <p class="muted">Marcos da sua jornada de estudos.</p>
+          <div class="card empty-state">
+            <h2>Em breve</h2>
+            <p class="muted">Aqui vão aparecer as suas conquistas conforme você registra questões, revisões e simulados.
+            </p>
+          </div>
+        </section>
 
-      <section id="view-suporte" class="view hidden">
-        <h1>Suporte</h1>
-        <p class="muted">Dúvidas frequentes sobre o funcionamento do site.</p>
-        <div class="card">
-          <details class="faq"><summary>Onde ficam salvos os meus dados?</summary>
-            <p class="muted">Somente neste navegador e neste dispositivo. Acessar por outro aparelho não mostra seus
-              registros.</p>
-          </details>
-          <details class="faq"><summary>Como faço para não perder meus dados?</summary>
-            <p class="muted">Use “Exportar backup” (no rodapé) com frequência. Para levar os dados a outro aparelho,
-              exporte lá e use “Importar backup” aqui.</p>
-          </details>
-          <details class="faq"><summary>Limpei o navegador e perdi tudo. Dá para recuperar?</summary>
-            <p class="muted">Só com um backup exportado antes. Sem backup, não há como recuperar os dados.</p>
-          </details>
-          <details class="faq"><summary>Como funciona o ID do perfil?</summary>
-            <p class="muted">É um número de 5 dígitos gerado ao criar o perfil. Você usa o ID e a senha para entrar, e
-              compartilha o ID para receber pedidos de amizade.</p>
-          </details>
-        </div>
-      </section>
+        <section id="view-suporte" class="view hidden">
+          <h1>Suporte</h1>
+          <p class="muted">Dúvidas frequentes sobre o funcionamento do site.</p>
+          <div class="card">
+            <details class="faq">
+              <summary>Onde ficam salvos os meus dados?</summary>
+              <p class="muted">Somente neste navegador e neste dispositivo. Acessar por outro aparelho não mostra seus
+                registros.</p>
+            </details>
+            <details class="faq">
+              <summary>Como faço para não perder meus dados?</summary>
+              <p class="muted">Use “Exportar backup” (no rodapé) com frequência. Para levar os dados a outro aparelho,
+                exporte lá e use “Importar backup” aqui.</p>
+            </details>
+            <details class="faq">
+              <summary>Limpei o navegador e perdi tudo. Dá para recuperar?</summary>
+              <p class="muted">Só com um backup exportado antes. Sem backup, não há como recuperar os dados.</p>
+            </details>
+            <details class="faq">
+              <summary>Como funciona o ID do perfil?</summary>
+              <p class="muted">É um número de 5 dígitos gerado ao criar o perfil. Você usa o ID e a senha para entrar, e
+                compartilha o ID para receber pedidos de amizade.</p>
+            </details>
+          </div>
+        </section>
 
-      <div class="notice alert" role="note">
-        <strong>Seus dados ficam só neste navegador</strong>
-        <p>Os dados são guardados localmente neste navegador e neste dispositivo, isto é: acessar o site por outro
-          dispositivo não exibirá seus registros. Use “Exportar backup” sempre que considerar necessário, para manter
-          uma cópia segura ou transferir os dados.</p>
-      </div>
-      <div class="actions" style="margin-top:10px"><button class="small" id="exportBtn">Exportar backup</button><button
-          class="small" id="importBtn">Importar backup</button><input id="importFile" type="file"
-          accept="application/json" class="hidden"><button class="small danger" id="clearBtn">Apagar meus dados</button></div>
+        <div class="notice alert" role="note">
+          <strong>Seus dados ficam só neste navegador</strong>
+          <p>Os dados são guardados localmente neste navegador e neste dispositivo, isto é: acessar o site por outro
+            dispositivo não exibirá seus registros. Use “Exportar backup” sempre que considerar necessário, para manter
+            uma cópia segura ou transferir os dados.</p>
+        </div>
+        <div class="actions" style="margin-top:10px"><button class="small" id="exportBtn">Exportar
+            backup</button><button class="small" id="importBtn">Importar backup</button><input id="importFile"
+            type="file" accept="application/json" class="hidden"><button class="small danger" id="clearBtn">Apagar meus
+            dados</button></div>
       </section>
     </main>
   </div>

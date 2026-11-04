@@ -19,6 +19,10 @@
   const MIN_PASSWORD = 7;
   const PROFILE_ID_SIZE = 5;
 
+  // Paginação: itens por página em cada lista.
+  const PAGE_SIZE = { sessions: 5, general: 10 };
+  const pages = { sessions: 1, general: 1 };
+
   const $ = (id) => document.getElementById(id);
   const arr = (x) => (Array.isArray(x) ? x : []);
   const pad = (n) => String(n).padStart(2, "0");
@@ -82,7 +86,23 @@
       records: [],
       reviews: [],
       mocks: [],
+      sessions: [],
       goals: { questions: 150, sessions: 15 },
+    };
+  }
+
+  function sanitizeStudySession(session) {
+    const raw = session && typeof session === "object" ? session : {};
+    const minutes = Math.round(+raw.minutes || 0);
+    const date = String(raw.date || today());
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
+    if (minutes < 1) return null;
+
+    return {
+      id: typeof raw.id === "string" && raw.id ? raw.id : uid(),
+      date,
+      minutes,
+      notes: String(raw.notes || "").trim().slice(0, 120),
     };
   }
 
@@ -100,8 +120,8 @@
     const password = String(raw.password || "");
     const avatar =
       typeof raw.avatar === "string" &&
-      /^data:image\/(jpeg|png|webp);base64,/.test(raw.avatar) &&
-      raw.avatar.length <= 300000
+        /^data:image\/(jpeg|png|webp);base64,/.test(raw.avatar) &&
+        raw.avatar.length <= 300000
         ? raw.avatar
         : "";
 
@@ -114,6 +134,9 @@
       records: arr(raw.records),
       reviews: arr(raw.reviews),
       mocks: arr(raw.mocks),
+      sessions: arr(raw.sessions)
+        .map((s) => sanitizeStudySession(s))
+        .filter(Boolean),
       goals: {
         questions: Math.max(1, +raw.goals?.questions || 150),
         sessions: Math.max(1, +raw.goals?.sessions || 15),
@@ -228,6 +251,7 @@
       records: arr(raw.records),
       reviews: arr(raw.reviews),
       mocks: arr(raw.mocks),
+      sessions: [],
       goals: {
         questions: Math.max(1, +raw.goals?.questions || 150),
         sessions: Math.max(1, +raw.goals?.sessions || 15),
@@ -395,6 +419,7 @@
   $("rDate").value = today();
   $("vDate").value = today();
   $("sDate").value = today();
+  $("sessDate").value = today();
 
   function renderAuthState() {
     const logged = !!loggedUser();
@@ -620,6 +645,8 @@
       b.classList.toggle("active", state.activeId === id);
       b.addEventListener("click", () => {
         state.activeId = id;
+        pages.sessions = 1;
+        pages.general = 1;
         save();
       });
       box.appendChild(b);
@@ -631,12 +658,13 @@
     const canEdit = isViewingOwnProfile();
     const notice = $("viewModeNotice");
 
+    // Aviso de modo leitura aparece se o usuário estiver vendo o perfil de outro amigo.
     notice.classList.toggle("hidden", canEdit || !target);
     if (!canEdit && target) {
       notice.innerHTML = `Você está vendo o perfil de <strong>${esc(target.name)}</strong> (ID ${esc(target.id)}). Neste modo, os formulários ficam em leitura.`;
     }
 
-    ["recordForm", "reviewForm", "mockForm", "goalForm"].forEach((formId) => {
+    ["recordForm", "reviewForm", "mockForm", "goalForm", "sessionForm"].forEach((formId) => {
       const form = $(formId);
       if (!form) return;
       form
@@ -658,6 +686,8 @@
     state.session.loggedInId = account.id;
     state.activeId = account.id;
     currentView = "dashboard";
+    pages.sessions = 1;
+    pages.general = 1;
     save();
     return true;
   }
@@ -757,6 +787,8 @@
 
     state.activeId = profileId;
     currentView = "dashboard";
+    pages.sessions = 1;
+    pages.general = 1;
     save();
   };
 
@@ -858,6 +890,7 @@
     $("rDate").value = today();
     $("rTotal").value = 20;
     $("rCorrect").value = 14;
+    pages.general = 1;
     save();
     alert("Registro salvo!");
   });
@@ -877,6 +910,7 @@
 
     e.target.reset();
     $("vDate").value = today();
+    pages.general = 1;
     save();
   });
 
@@ -905,6 +939,7 @@
     $("sDate").value = today();
     $("sTotal").value = 60;
     $("sCorrect").value = 35;
+    pages.general = 1;
     save();
     alert("Simulado salvo!");
   });
@@ -922,6 +957,29 @@
     alert("Metas atualizadas!");
   });
 
+  $("sessionForm").addEventListener("submit", (e) => {
+    e.preventDefault();
+    if (!isViewingOwnProfile()) return;
+
+    const minutes = Math.round(+$("sessMinutes").value || 0);
+    if (minutes < 1) return alert("Informe a duração da sessão em minutos.");
+
+    loggedUser().sessions.push({
+      id: uid(),
+      date: $("sessDate").value,
+      minutes,
+      notes: $("sessNotes").value.trim().slice(0, 120),
+    });
+
+    e.target.reset();
+    $("sessDate").value = today();
+    $("sessMinutes").value = 50;
+    pages.sessions = 1;
+    pages.general = 1;
+    save();
+    alert("Sessão registrada!");
+  });
+
   // 2026-11-03 -> 03/11/2026 (só na exibição; os dados continuam em AAAA-MM-DD)
   function fmtDate(d) {
     const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(d || ""));
@@ -936,6 +994,30 @@
 
   function pct(a, b) {
     return b ? Math.round((a / b) * 100) : 0;
+  }
+
+  function activityDates(profile) {
+    const out = new Set();
+    arr(profile.records).forEach((r) => {
+      if (r?.date) out.add(r.date);
+    });
+    arr(profile.mocks).forEach((m) => {
+      if (m?.date) out.add(m.date);
+    });
+    arr(profile.sessions).forEach((s) => {
+      if (s?.date) out.add(s.date);
+    });
+    return out;
+  }
+
+  function currentStreak(dateSet) {
+    let count = 0;
+    const d = new Date();
+    while (dateSet.has(iso(d))) {
+      count += 1;
+      d.setDate(d.getDate() - 1);
+    }
+    return count;
   }
 
   function render() {
@@ -957,13 +1039,16 @@
     setEditMode();
 
     const rs = profile.records;
+    const week = arr(profile.sessions).filter(
+      (s) => s.date >= weekStart(today()) && s.date <= today(),
+    );
     const questions = rs.reduce((a, r) => a + r.total, 0);
     const correct = rs.reduce((a, r) => a + r.correct, 0);
     const pending = profile.reviews.filter((r) => !r.done).length;
 
     $("mQuestions").textContent = questions.toLocaleString("pt-BR");
     $("mAccuracy").textContent = questions ? pct(correct, questions) + "%" : "—";
-    $("mSessions").textContent = rs.length;
+    $("mSessions").textContent = week.length;
     $("mReviews").textContent = pending;
 
     $("gQuestions").value = profile.goals.questions;
@@ -972,11 +1057,209 @@
     renderTrend(rs);
     renderSubjects(rs);
     renderRecent(rs);
+    renderStreak(profile);
+    renderGeneralRecords(profile, isViewingOwnProfile());
     renderReviews(profile, isViewingOwnProfile());
     renderErrors(rs);
     renderWeak(rs);
     renderMocks(profile, isViewingOwnProfile());
+    renderSessions(profile, isViewingOwnProfile());
     renderGoals(profile);
+  }
+
+  function renderStreak(profile) {
+    const grid = $("streakGrid");
+    if (!grid) return;
+
+    const dates = activityDates(profile);
+    const monthNames = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+    const weekdayLabels = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
+
+    const end = new Date();
+    end.setHours(12, 0, 0, 0);
+    const endOffset = (end.getDay() + 6) % 7;
+
+    const start = new Date(end);
+    start.setDate(start.getDate() - endOffset - 7 * 51);
+
+    const weeks = [];
+    for (let w = 0; w < 52; w++) {
+      const week = [];
+      for (let d = 0; d < 7; d++) {
+        const day = new Date(start);
+        day.setDate(start.getDate() + w * 7 + d);
+        week.push(day);
+      }
+      weeks.push(week);
+    }
+
+    const monthMarkers = [];
+    weeks.forEach((week, idx) => {
+      const hasFirstDay = week.find((day) => day.getDate() === 1);
+      if (!hasFirstDay) return;
+      monthMarkers.push({ col: idx + 1, label: monthNames[hasFirstDay.getMonth()] });
+    });
+
+    const monthsHtml = monthMarkers
+      .map((m) => `<span class="streak-month" style="grid-column:${m.col}">${m.label}</span>`)
+      .join("");
+
+    const weekdaysHtml = weekdayLabels
+      .map((label) => `<span class="streak-weekday">${label}</span>`)
+      .join("");
+
+    const cellsHtml = weeks
+      .map((week) =>
+        week
+          .map((day) => {
+            const key = iso(day);
+            const active = dates.has(key);
+            return `<span class="streak-day${active ? " active" : ""}" title="${esc(fmtDate(key))}${active ? " - com registro" : ""}"></span>`;
+          })
+          .join(""),
+      )
+      .join("");
+
+    grid.innerHTML = `<div class="streak-board"><div class="streak-corner"></div><div class="streak-months">${monthsHtml}</div><div class="streak-weekdays">${weekdaysHtml}</div><div class="streak-cells">${cellsHtml}</div></div>`;
+
+    $("streakCurrent").textContent = `${currentStreak(dates)} dia(s) seguidos`;
+    $("streakTotal").textContent = `${dates.size} dia(s) com registro`;
+  }
+
+  function generalRecordItems(profile) {
+    const list = [];
+
+    // reverse(): dentro de cada tipo, o item criado por último vem primeiro.
+    [...arr(profile.records)].reverse().forEach((r) => {
+      list.push({
+        id: r.id,
+        date: r.date,
+        type: "record",
+        label: "Questões",
+        title: `${r.subject || "Disciplina"} — ${r.topic || "Sem assunto"}`,
+        meta: `${r.correct}/${r.total} (${pct(r.correct, r.total)}%)`,
+      });
+    });
+
+    [...arr(profile.reviews)].reverse().forEach((r) => {
+      list.push({
+        id: r.id,
+        date: r.date,
+        type: "review",
+        label: "Revisão",
+        title: `${r.subject || "Disciplina"} — ${r.topic || "Sem assunto"}`,
+        meta: `${r.type || "Revisão"}${r.done ? " • concluída" : " • pendente"}`,
+      });
+    });
+
+    [...arr(profile.mocks)].reverse().forEach((m) => {
+      list.push({
+        id: m.id,
+        date: m.date,
+        type: "mock",
+        label: "Simulado",
+        title: m.name || "Simulado",
+        meta: `${m.correct}/${m.total} (${pct(m.correct, m.total)}%)${m.minutes ? ` • ${m.minutes} min` : ""}`,
+      });
+    });
+
+    [...arr(profile.sessions)].reverse().forEach((s) => {
+      list.push({
+        id: s.id,
+        date: s.date,
+        type: "session",
+        label: "Sessão",
+        title: `Sessão de estudo (${s.minutes} min)`,
+        meta: s.notes || "",
+      });
+    });
+
+    // sort estável: só por data; o desempate mantém a ordem de inserção acima.
+    return list.sort((a, b) =>
+      String(b.date || "").localeCompare(String(a.date || "")),
+    );
+  }
+
+  /* ---------- Paginação ---------- */
+  function paginate(list, key) {
+    const size = PAGE_SIZE[key];
+    const totalPages = Math.max(1, Math.ceil(list.length / size));
+    // Evita página inexistente (ex.: depois de excluir o último item da página)
+    pages[key] = Math.min(Math.max(1, pages[key]), totalPages);
+    const start = (pages[key] - 1) * size;
+    return {
+      items: list.slice(start, start + size),
+      page: pages[key],
+      totalPages,
+    };
+  }
+
+  function pagerHTML(key, page, totalPages) {
+    if (totalPages <= 1) return "";
+
+    const nums = [];
+    for (let p = 1; p <= totalPages; p++) {
+      if (p === 1 || p === totalPages || Math.abs(p - page) <= 1) nums.push(p);
+      else if (nums[nums.length - 1] !== "…") nums.push("…");
+    }
+
+    const btn = (label, target, disabled, active) =>
+      `<button class="small${active ? " active" : ""}" type="button" ${disabled ? "disabled" : ""} onclick="window.goToPage('${key}',${target})">${label}</button>`;
+
+    return `<nav class="pager" aria-label="Paginação">${btn("‹ Anterior", page - 1, page === 1)}${nums
+      .map((n) => (n === "…" ? '<span class="muted">…</span>' : btn(n, n, false, n === page)))
+      .join("")}${btn("Próxima ›", page + 1, page === totalPages)}</nav>`;
+  }
+
+  window.goToPage = (key, p) => {
+    pages[key] = p;
+    render();
+  };
+
+  function renderGeneralRecords(profile, canEdit) {
+    const box = $("generalRecordList");
+    if (!box) return;
+
+    const list = generalRecordItems(profile);
+    if (!list.length) {
+      box.innerHTML = '<div class="empty">Nenhum registro para mostrar.</div>';
+      return;
+    }
+
+    const { items, page, totalPages } = paginate(list, "general");
+
+    box.innerHTML =
+      `<div class="general-records">${items
+        .map(
+          (x) =>
+            `<div class="general-record"><div><div class="record-meta"><span class="record-type">${esc(x.label)}</span><span class="muted">${esc(fmtDate(x.date))}</span></div><strong>${esc(x.title)}</strong>${x.meta ? `<div class="muted">${esc(x.meta)}</div>` : ""}</div>${canEdit ? `<button class="small danger" type="button" onclick="window.removeGeneralRecord('${esc(x.type)}','${esc(x.id)}')">Excluir</button>` : ""}</div>`,
+        )
+        .join("")}</div>` + pagerHTML("general", page, totalPages);
+  }
+
+  function renderSessions(profile, canEdit) {
+    const box = $("sessionList");
+    if (!box) return;
+
+    // reverse + sort estável: no mesmo dia, a mais recém-criada vem primeiro
+    const list = [...arr(profile.sessions)]
+      .reverse()
+      .sort((a, b) => b.date.localeCompare(a.date));
+
+    if (!list.length) {
+      box.innerHTML = '<div class="empty">Nenhuma sessão registrada.</div>';
+      return;
+    }
+
+    const { items, page, totalPages } = paginate(list, "sessions");
+
+    box.innerHTML =
+      `<div class="general-records">${items
+        .map(
+          (s) =>
+            `<div class="general-record"><div><div class="record-meta"><span class="record-type">Sessão</span><span class="muted">${esc(fmtDate(s.date))}</span></div><strong>${s.minutes} minuto(s)</strong>${s.notes ? `<div class="muted">${esc(s.notes)}</div>` : ""}</div>${canEdit ? `<button class="small danger" type="button" onclick="window.removeGeneralRecord('session','${esc(s.id)}')">Excluir</button>` : ""}</div>`,
+        )
+        .join("")}</div>` + pagerHTML("sessions", page, totalPages);
   }
 
   function renderTrend(rs) {
@@ -1134,7 +1417,7 @@
     });
 
     const list = Object.entries(g)
-      .filter((x) => x[1].t >= 5)
+      .filter((x) => pct(x[1].c, x[1].t) < 70)
       .sort((a, b) => a[1].c / a[1].t - b[1].c / b[1].t)
       .slice(0, 8);
 
@@ -1145,20 +1428,50 @@
             `<div style="padding:10px 0;border-bottom:1px solid var(--line)"><div style="display:flex;justify-content:space-between;gap:8px;font-size:13px"><b>${esc(k)}</b><span>${pct(v.c, v.t)}%</span></div><div class="progress" style="margin-top:7px"><i style="width:${pct(v.c, v.t)}%"></i></div><div class="muted">${v.t} questões em ${v.n} registro(s)</div></div>`,
         )
         .join("")
-      : '<div class="empty">Registre pelo menos 5 questões por assunto para encontrar pontos de atenção.</div>';
+      : '<div class="empty">Nenhum assunto abaixo de 70% no momento.</div>';
   }
 
   function renderMocks(profile, canEdit) {
     const list = [...profile.mocks].sort((x, y) => y.date.localeCompare(x.date));
 
     $("mockList").innerHTML = list.length
-      ? `<div class="table-wrap"><table class="rtable"><thead><tr><th>Data</th><th>Simulado</th><th>Resultado</th><th>Tempo</th><th></th></tr></thead><tbody>${list
+      ? `<div class="table-wrap"><table class="rtable rtable-mocks"><thead><tr><th>Data</th><th>Simulado</th><th>Resultado</th><th>Tempo</th><th></th></tr></thead><tbody>${list
         .map(
-          (m) =>
-            `<tr><td data-label="Data">${esc(fmtDate(m.date))}</td><td class="cell-main"><b>${esc(m.name)}</b><br><span class="muted">${esc(m.notes)}</span></td><td data-label="Resultado"><span><b>${pct(m.correct, m.total)}%</b> · ${m.correct}/${m.total}</span></td><td data-label="Tempo">${m.minutes ? m.minutes + " min" : "—"}</td><td class="cell-actions">${canEdit ? `<button class=\"small danger\" onclick=\"window.removeMock('${esc(m.id)}')\">Excluir</button>` : ""}</td></tr>`,
+          (m) => {
+            const notes = String(m.notes || "").trim();
+            return `<tr><td data-label="Data">${esc(fmtDate(m.date))}</td><td class="cell-main"><b>${esc(m.name)}</b>${notes ? `<div class="mock-note-wrap"><span class="muted mock-note">${esc(notes)}</span><button class="mock-note-toggle hidden" type="button">Ver mais</button></div>` : ""}</td><td data-label="Resultado"><span><b>${pct(m.correct, m.total)}%</b> · ${m.correct}/${m.total}</span></td><td data-label="Tempo">${m.minutes ? m.minutes + " min" : "—"}</td><td class="cell-actions">${canEdit ? `<button class=\"small danger\" onclick=\"window.removeMock('${esc(m.id)}')\">Excluir</button>` : ""}</td></tr>`;
+          },
         )
         .join("")}</tbody></table></div>`
       : '<div class="empty">Seus simulados aparecerão aqui.</div>';
+
+    setupMockNoteToggles();
+  }
+
+  function setupMockNoteToggles() {
+    const host = $("mockList");
+    if (!host) return;
+
+    host.querySelectorAll(".mock-note-wrap").forEach((wrap) => {
+      const note = wrap.querySelector(".mock-note");
+      const toggle = wrap.querySelector(".mock-note-toggle");
+      if (!note || !toggle) return;
+
+      note.classList.remove("expanded");
+      toggle.textContent = "Ver mais";
+      toggle.setAttribute("aria-expanded", "false");
+
+      const overflowing = note.scrollWidth > note.clientWidth + 1;
+      toggle.classList.toggle("hidden", !overflowing);
+
+      if (!overflowing) return;
+
+      toggle.onclick = () => {
+        const expanded = note.classList.toggle("expanded");
+        toggle.textContent = expanded ? "Ver menos" : "Ver mais";
+        toggle.setAttribute("aria-expanded", String(expanded));
+      };
+    });
   }
 
   window.removeMock = (id) => {
@@ -1167,15 +1480,31 @@
     save();
   };
 
+  window.removeGeneralRecord = (type, id) => {
+    if (!isViewingOwnProfile()) return;
+    const me = loggedUser();
+    if (!me) return;
+
+    if (type === "record") me.records = me.records.filter((x) => x.id !== id);
+    if (type === "review") me.reviews = me.reviews.filter((x) => x.id !== id);
+    if (type === "mock") me.mocks = me.mocks.filter((x) => x.id !== id);
+    if (type === "session") me.sessions = me.sessions.filter((x) => x.id !== id);
+    save();
+  };
+
   function renderGoals(profile) {
     const start = weekStart(today());
-    const week = profile.records.filter((r) => r.date >= start && r.date <= today());
-    const q = week.reduce((a, r) => a + r.total, 0);
-    const s = week.length;
+    const weekRecords = profile.records.filter((r) => r.date >= start && r.date <= today());
+    const weekSessions = arr(profile.sessions).filter(
+      (s) => s.date >= start && s.date <= today(),
+    );
+    const q = weekRecords.reduce((a, r) => a + r.total, 0);
+    const s = weekSessions.length;
+    const totalMinutes = weekSessions.reduce((acc, x) => acc + (+x.minutes || 0), 0);
     const g = profile.goals;
 
     $("goalProgress").innerHTML =
-      `<div style="margin-bottom:20px"><div style="display:flex;justify-content:space-between;margin-bottom:7px"><b>Questões</b><span>${q} / ${g.questions}</span></div><div class="progress"><i style="width:${Math.min(100, pct(q, g.questions))}%"></i></div><div class="muted" style="margin-top:5px">${Math.max(0, g.questions - q)} questões para atingir a meta</div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:7px"><b>Sessões</b><span>${s} / ${g.sessions}</span></div><div class="progress"><i style="width:${Math.min(100, pct(s, g.sessions))}%"></i></div><div class="muted" style="margin-top:5px">${Math.max(0, g.sessions - s)} sessões para atingir a meta</div></div>`;
+      `<div style="margin-bottom:20px"><div style="display:flex;justify-content:space-between;margin-bottom:7px"><b>Questões</b><span>${q} / ${g.questions}</span></div><div class="progress"><i style="width:${Math.min(100, pct(q, g.questions))}%"></i></div><div class="muted" style="margin-top:5px">${Math.max(0, g.questions - q)} questões para atingir a meta</div></div><div><div style="display:flex;justify-content:space-between;margin-bottom:7px"><b>Sessões</b><span>${s} / ${g.sessions}</span></div><div class="progress"><i style="width:${Math.min(100, pct(s, g.sessions))}%"></i></div><div class="muted" style="margin-top:5px">${Math.max(0, g.sessions - s)} sessões para atingir a meta • ${totalMinutes} minuto(s) registrados nesta semana</div></div>`;
   }
 
   $("exportBtn").addEventListener("click", () => {
@@ -1228,6 +1557,8 @@
       }
 
       state = next;
+      pages.sessions = 1;
+      pages.general = 1;
       save();
 
       if (importedCredentials.length) {
@@ -1396,6 +1727,7 @@
   window.addEventListener("resize", () => {
     const profile = viewedUser();
     renderTrend(profile ? profile.records : []);
+    setupMockNoteToggles();
   });
 
   if (migrationCredentials.length) {

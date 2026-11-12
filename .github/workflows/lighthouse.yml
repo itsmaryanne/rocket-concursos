@@ -1,0 +1,25 @@
+name: Lighthouse
+
+# Roda manualmente (aba Actions > Lighthouse > Run workflow) e em pull requests.
+# Não bloqueia nada: as metas em lighthouserc.json são avisos ("warn").
+on:
+  workflow_dispatch:
+  pull_request:
+
+jobs:
+  lighthouse:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Preparar arquivos publicados
+        run: node scripts/preparar-site.mjs
+
+      - name: Lighthouse CI
+        run: npx --yes @lhci/cli autorun

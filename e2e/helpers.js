@@ -58,3 +58,59 @@ export async function registrarSessoes(page, quantidade) {
     );
   }
 }
+
+/** Grava dados no localStorage ANTES do app carregar (só na 1ª carga da aba). */
+export async function semear(page, entradas) {
+  await page.addInitScript((dados) => {
+    if (sessionStorage.getItem("__semeado")) return;
+    sessionStorage.setItem("__semeado", "1");
+    for (const [chave, valor] of Object.entries(dados)) {
+      localStorage.setItem(chave, valor);
+    }
+  }, entradas);
+}
+
+export const CHAVE = "trilha_aprovacao_v3";
+
+export function conta(id, extra = {}) {
+  return {
+    id, name: "Ana", password: "senha1234", avatar: "", friends: [],
+    records: [], reviews: [], mocks: [], sessions: [],
+    goals: { questions: 150, sessions: 15 }, ...extra,
+  };
+}
+
+export function estado(contas, logadoId = contas[0]?.id, requests = []) {
+  return {
+    version: 3, activeId: logadoId, session: { loggedInId: logadoId },
+    accounts: contas, requests,
+  };
+}
+
+export const registroValido = (extra = {}) => ({
+  id: "ok-1", date: "2026-11-03", subject: "Português", topic: "Crase",
+  source: "", total: 20, correct: 14, difficulty: "ok", error: "", notes: "", ...extra,
+});
+
+export const chavesDoNavegador = (page) =>
+  page.evaluate(() => Object.keys(localStorage));
+
+/** Ana e Bia ficam amigas. Termina logado como Ana. Devolve as IDs. */
+export async function tornarAmigos(page, mensagens) {
+  const idAna = await criarPerfil(page, mensagens, "Ana", "senha1234");
+  await sair(page);
+
+  const idBia = await criarPerfil(page, mensagens, "Bia", "senha5678");
+  await abrirMenu(page, "amigos");
+  await page.fill("#friendQuery", idAna);
+  await page.click('#friendSearchForm button[type="submit"]');
+  await page.locator("#friendSearchResults").getByRole("button", { name: "Enviar pedido" }).click();
+  await expect(page.locator("#outgoingRequests")).toContainText("Ana");
+  await sair(page);
+
+  await entrar(page, idAna, "senha1234");
+  await abrirMenu(page, "amigos");
+  await page.locator("#incomingRequests").getByRole("button", { name: "Aceitar" }).click();
+  await expect(page.locator("#friendList")).toContainText("Bia");
+  return { idAna, idBia };
+}

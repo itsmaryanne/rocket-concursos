@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 import { observarDialogos, criarPerfil } from "./helpers";
 
 test.describe("tema e responsividade", () => {

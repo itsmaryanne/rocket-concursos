@@ -34,6 +34,99 @@
   const today = () => iso(new Date());
   const uid = () => crypto.randomUUID();
 
+  /* ---------- Saneamento de dados (armazenamento e importação) ---------- */
+  // Quantidade de itens inválidos descartados na última chamada de normalizeV3.
+  let droppedCount = 0;
+
+  function isRealDate(value) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value ?? ""));
+    if (!m) return false;
+    const y = +m[1];
+    const mo = +m[2];
+    const d = +m[3];
+    const dt = new Date(y, mo - 1, d);
+    return dt.getFullYear() === y && dt.getMonth() === mo - 1 && dt.getDate() === d;
+  }
+
+  // IDs entram em onclick="...('ID')": só aceitamos caracteres inofensivos.
+  const SAFE_ID = /^[A-Za-z0-9_-]{1,64}$/;
+
+  function cleanId(raw, used) {
+    let id = typeof raw === "string" && SAFE_ID.test(raw) ? raw : "";
+    if (!id || (used && used.has(id))) id = uid();
+    if (used) used.add(id);
+    return id;
+  }
+
+  const cleanText = (v, max) => String(v ?? "").trim().slice(0, max);
+
+  function cleanInt(v) {
+    const n = Math.round(Number(v));
+    return Number.isFinite(n) ? n : NaN;
+  }
+
+  function objectOrEmpty(x) {
+    return x && typeof x === "object" && !Array.isArray(x) ? x : {};
+  }
+
+  function sanitizeRecord(item, used) {
+    const r = objectOrEmpty(item);
+    const total = cleanInt(r.total);
+    const correct = cleanInt(r.correct);
+    if (!isRealDate(r.date) || !(total >= 1) || !(correct >= 0) || correct > total) {
+      droppedCount++;
+      return null;
+    }
+    return {
+      id: cleanId(r.id, used),
+      date: String(r.date),
+      subject: cleanText(r.subject, 80),
+      topic: cleanText(r.topic, 120),
+      source: cleanText(r.source, 120),
+      total,
+      correct,
+      difficulty: ["ok", "medio", "dificil"].includes(r.difficulty) ? r.difficulty : "ok",
+      error: cleanText(r.error, 80),
+      notes: cleanText(r.notes, 500),
+    };
+  }
+
+  function sanitizeReview(item, used) {
+    const r = objectOrEmpty(item);
+    if (!isRealDate(r.date)) {
+      droppedCount++;
+      return null;
+    }
+    return {
+      id: cleanId(r.id, used),
+      subject: cleanText(r.subject, 80),
+      topic: cleanText(r.topic, 120),
+      date: String(r.date),
+      type: cleanText(r.type, 80),
+      done: r.done === true,
+    };
+  }
+
+  function sanitizeMock(item, used) {
+    const r = objectOrEmpty(item);
+    const total = cleanInt(r.total);
+    const correct = cleanInt(r.correct);
+    if (!isRealDate(r.date) || !(total >= 1) || !(correct >= 0) || correct > total) {
+      droppedCount++;
+      return null;
+    }
+    const minutes = cleanInt(r.minutes);
+    return {
+      id: cleanId(r.id, used),
+      date: String(r.date),
+      name: cleanText(r.name, 120),
+      total,
+      correct,
+      minutes: minutes >= 0 ? minutes : 0,
+      notes: cleanText(r.notes, 500),
+    };
+  }
+
   function esc(s) {
     return String(s ?? "").replace(
       /[&<>"']/g,
@@ -91,15 +184,17 @@
     };
   }
 
-  function sanitizeStudySession(session) {
-    const raw = session && typeof session === "object" ? session : {};
+  function sanitizeStudySession(session, used) {
+    const raw = objectOrEmpty(session);
     const minutes = Math.round(+raw.minutes || 0);
     const date = String(raw.date || today());
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
-    if (minutes < 1) return null;
+    if (!isRealDate(date) || minutes < 1) {
+      droppedCount++;
+      return null;
+    }
 
     return {
-      id: typeof raw.id === "string" && raw.id ? raw.id : uid(),
+      id: cleanId(raw.id, used),
       date,
       minutes,
       notes: String(raw.notes || "").trim().slice(0, 120),
@@ -125,17 +220,25 @@
         ? raw.avatar
         : "";
 
+    const usedItemIds = new Set(); // IDs únicos entre todos os itens da conta
+
     return {
       id,
       name,
       password,
       avatar,
       friends: arr(raw.friends).map((f) => String(f)),
-      records: arr(raw.records),
-      reviews: arr(raw.reviews),
-      mocks: arr(raw.mocks),
+      records: arr(raw.records)
+        .map((r) => sanitizeRecord(r, usedItemIds))
+        .filter(Boolean),
+      reviews: arr(raw.reviews)
+        .map((r) => sanitizeReview(r, usedItemIds))
+        .filter(Boolean),
+      mocks: arr(raw.mocks)
+        .map((m) => sanitizeMock(m, usedItemIds))
+        .filter(Boolean),
       sessions: arr(raw.sessions)
-        .map((s) => sanitizeStudySession(s))
+        .map((s) => sanitizeStudySession(s, usedItemIds))
         .filter(Boolean),
       goals: {
         questions: Math.max(1, +raw.goals?.questions || 150),
@@ -144,22 +247,23 @@
     };
   }
 
-  function sanitizeRequest(req, byId) {
-    const raw = req && typeof req === "object" ? req : {};
+  function sanitizeRequest(req, byId, usedIds) {
+    const raw = objectOrEmpty(req);
     const fromId = String(raw.fromId || "");
     const toId = String(raw.toId || "");
     if (!byId.has(fromId) || !byId.has(toId) || fromId === toId) return null;
     if (String(raw.status || "pending") !== "pending") return null;
     return {
-      id: typeof raw.id === "string" && raw.id ? raw.id : uid(),
+      id: cleanId(raw.id, usedIds),
       fromId,
       toId,
       status: "pending",
-      createdAt: String(raw.createdAt || today()),
+      createdAt: isRealDate(raw.createdAt) ? String(raw.createdAt) : today(),
     };
   }
 
   function normalizeV3(raw) {
+    droppedCount = 0;
     const source = raw && typeof raw === "object" ? raw : {};
     const accounts = [];
     const usedIds = new Set();
@@ -199,8 +303,9 @@
     });
 
     const requestMap = new Map();
+    const usedRequestIds = new Set();
     arr(source.requests).forEach((req) => {
-      const s = sanitizeRequest(req, byId);
+      const s = sanitizeRequest(req, byId, usedRequestIds);
       if (!s) return;
       const key = [s.fromId, s.toId].sort().join("|");
       if (requestMap.has(key)) return;
@@ -324,39 +429,100 @@
     };
   }
 
-  function load() {
+  // Guarda o texto original sob outra chave para que o próximo save() não o apague.
+  function preservarCopia(raw, motivo) {
+    if (typeof raw !== "string" || !raw) return null;
+    const stamp = new Date().toISOString().replace(/\D/g, "").slice(0, 14);
+    const chave = `${KEY}_${motivo}_${stamp}`;
     try {
-      const v3 = localStorage.getItem(KEY);
-      if (v3) return { state: normalizeV3(JSON.parse(v3)), credentials: [] };
+      localStorage.setItem(chave, raw);
+      return chave;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function load() {
+    let raw = null;
+    try {
+      raw = localStorage.getItem(KEY);
+      if (raw) {
+        const loaded = normalizeV3(JSON.parse(raw));
+        const dropped = droppedCount;
+        if (dropped > 0) {
+          const copia = preservarCopia(raw, "antes_da_limpeza");
+          return {
+            state: loaded,
+            credentials: [],
+            recovery: { tipo: "limpeza", dropped, copia },
+          };
+        }
+        return { state: loaded, credentials: [], recovery: null };
+      }
 
       const v2 = localStorage.getItem(OLD_KEY_V2);
-      if (v2) return migrateFromV2(JSON.parse(v2));
+      if (v2) return { ...migrateFromV2(JSON.parse(v2)), recovery: null };
 
       const v1 = localStorage.getItem(OLD_KEY_V1);
-      if (v1) return migrateFromV1(JSON.parse(v1));
+      if (v1) return { ...migrateFromV1(JSON.parse(v1)), recovery: null };
     } catch (e) {
-      // Fallback para estado vazio se houver parse inválido.
+      const copia = preservarCopia(raw, "corrompido");
+      return {
+        state: normalizeV3({}),
+        credentials: [],
+        recovery: { tipo: "corrompido", copia },
+      };
     }
 
-    return { state: normalizeV3({}), credentials: [] };
+    return { state: normalizeV3({}), credentials: [], recovery: null };
   }
 
   let migrationCredentials = [];
+  let recoveryInfo = null;
   let lastUserSearch = "";
   let searchResults = [];
   let state = (() => {
     const loaded = load();
     migrationCredentials = loaded.credentials;
+    recoveryInfo = loaded.recovery;
     return loaded.state;
   })();
 
+  let lastSaveFailed = false;
+
+  function setSaveWarning(on) {
+    let box = $("saveWarning");
+    if (!box && on) {
+      box = document.createElement("div");
+      box.id = "saveWarning";
+      box.className = "notice alert";
+      box.setAttribute("role", "alert");
+      box.innerHTML =
+        "<strong>Alterações não salvas</strong><p>O navegador não permitiu gravar seus dados (armazenamento cheio ou bloqueado). O que você fez agora só existe nesta aba e será perdido ao fechá-la. Use “Exportar backup” (no rodapé) antes de sair.</p>";
+      const main = document.querySelector("main");
+      if (main) main.prepend(box);
+    }
+    if (box) box.classList.toggle("hidden", !on);
+  }
+
   function save() {
+    let ok = true;
     try {
       localStorage.setItem(KEY, JSON.stringify(state));
     } catch (e) {
-      alert("Não foi possível salvar no navegador (armazenamento cheio ou bloqueado). Exporte um backup.");
+      ok = false;
     }
+
+    if (!ok && !lastSaveFailed) {
+      alert(
+        "Não foi possível salvar no navegador (armazenamento cheio ou bloqueado). Suas últimas alterações NÃO foram gravadas. Exporte um backup agora.",
+      );
+    }
+    lastSaveFailed = !ok;
+    setSaveWarning(!ok);
+
     render();
+    return ok;
   }
 
   function accountById(id) {
@@ -534,7 +700,7 @@
       ? list
         .map(
           (friend) =>
-            `<div class="friend-row">${avatarHTML(friend, "md")}<div class="friend-info"><strong>${esc(friend.name)}</strong><span class="muted">ID ${esc(friend.id)}</span></div><div class="request-actions"><button class="small primary" type="button" onclick="window.viewProfile('${esc(friend.id)}')">Ver dashboard</button><button class="small danger" type="button" onclick="window.removeFriend('${esc(friend.id)}')">Remover</button></div></div>`,
+            `<div class="friend-row">${avatarHTML(friend, "md")}<div class="friend-info"><strong>${esc(friend.name)}</strong><span class="muted">ID ${esc(friend.id)}</span></div><div class="request-actions"><button class="small primary" type="button" aria-label="Ver dashboard de ${esc(friend.name)}" onclick="window.viewProfile('${esc(friend.id)}')">Ver dashboard</button><button class="small danger" type="button" aria-label="Remover ${esc(friend.name)} dos amigos" onclick="window.removeFriend('${esc(friend.id)}')">Remover</button></div></div>`,
         )
         .join("")
       : '<div class="muted">Nenhuma amizade adicionada ainda.</div>';
@@ -585,7 +751,7 @@
     box.innerHTML = searchResults
       .map((u) => {
         const rel = requestStateFor(me.id, u.id);
-        let action = `<button class="small primary" type="button" onclick="window.sendFriendRequest('${esc(u.id)}')">Enviar pedido</button>`;
+        let action = `<button class="small primary" type="button" aria-label="Enviar pedido de amizade para ${esc(u.name)}" onclick="window.sendFriendRequest('${esc(u.id)}')">Enviar pedido</button>`;
         if (rel === "friend") action = '<span class="muted">Já é seu amigo</span>';
         if (rel === "outgoing") action = '<span class="muted">Pedido enviado</span>';
         if (rel === "incoming") action = '<span class="muted">Esse usuário já te enviou pedido</span>';
@@ -612,7 +778,7 @@
       ? incoming
         .map(
           ({ req, user }) =>
-            `<div class="request-item"><div class="request-head"><strong>${esc(user.name)}</strong><span class="muted">ID ${esc(user.id)}</span></div><div class="request-actions"><button class="small primary" type="button" onclick="window.acceptFriendRequest('${esc(req.id)}')">Aceitar</button><button class="small danger" type="button" onclick="window.rejectFriendRequest('${esc(req.id)}')">Recusar</button></div></div>`,
+            `<div class="request-item"><div class="request-head"><strong>${esc(user.name)}</strong><span class="muted">ID ${esc(user.id)}</span></div><div class="request-actions"><button class="small primary" type="button" aria-label="Aceitar pedido de ${esc(user.name)}" onclick="window.acceptFriendRequest('${esc(req.id)}')">Aceitar</button><button class="small danger" type="button" aria-label="Recusar pedido de ${esc(user.name)}" onclick="window.rejectFriendRequest('${esc(req.id)}')">Recusar</button></div></div>`,
         )
         .join("")
       : '<div class="muted">Sem pedidos recebidos.</div>';
@@ -621,7 +787,7 @@
       ? outgoing
         .map(
           ({ req, user }) =>
-            `<div class="request-item"><div class="request-head"><strong>${esc(user.name)}</strong><span class="muted">ID ${esc(user.id)}</span></div><div class="request-actions"><button class="small danger" type="button" onclick="window.cancelFriendRequest('${esc(req.id)}')">Cancelar pedido</button></div></div>`,
+            `<div class="request-item"><div class="request-head"><strong>${esc(user.name)}</strong><span class="muted">ID ${esc(user.id)}</span></div><div class="request-actions"><button class="small danger" type="button" aria-label="Cancelar pedido para ${esc(user.name)}" onclick="window.cancelFriendRequest('${esc(req.id)}')">Cancelar pedido</button></div></div>`,
         )
         .join("")
       : '<div class="muted">Sem pedidos enviados.</div>';
@@ -710,9 +876,7 @@
     currentView = "dashboard";
 
     e.target.reset();
-    save();
-
-    alert(`Perfil criado com sucesso. Sua ID de acesso é: ${id}`);
+    if (save()) alert(`Perfil criado com sucesso. Sua ID de acesso é: ${id}`);
   });
 
   $("loginForm").addEventListener("submit", (e) => {
@@ -761,8 +925,7 @@
       status: "pending",
       createdAt: today(),
     });
-    save();
-    alert("Pedido de amizade enviado.");
+    if (save()) alert("Pedido de amizade enviado.");
   }
 
   window.removeFriend = (friendId) => {
@@ -851,10 +1014,12 @@
 
   document.querySelectorAll("[data-tab]").forEach((b) =>
     b.addEventListener("click", () => {
-      b.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
-      document
-        .querySelectorAll("[data-tab]")
-        .forEach((x) => x.classList.toggle("active", x === b));
+      const reduzir = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+      b.scrollIntoView({ inline: "center", block: "nearest", behavior: reduzir ? "auto" : "smooth" });
+      document.querySelectorAll("[data-tab]").forEach((x) => {
+        x.classList.toggle("active", x === b);
+        x.setAttribute("aria-selected", String(x === b));
+      });
       document
         .querySelectorAll(".panel")
         .forEach((x) => x.classList.toggle("hidden", x.id !== b.dataset.tab));
@@ -891,8 +1056,7 @@
     $("rTotal").value = 20;
     $("rCorrect").value = 14;
     pages.general = 1;
-    save();
-    alert("Registro salvo!");
+    if (save()) alert("Registro salvo!");
   });
 
   $("reviewForm").addEventListener("submit", (e) => {
@@ -940,8 +1104,7 @@
     $("sTotal").value = 60;
     $("sCorrect").value = 35;
     pages.general = 1;
-    save();
-    alert("Simulado salvo!");
+    if (save()) alert("Simulado salvo!");
   });
 
   $("goalForm").addEventListener("submit", (e) => {
@@ -953,8 +1116,7 @@
       sessions: Math.max(1, +$("gSessions").value),
     };
 
-    save();
-    alert("Metas atualizadas!");
+    if (save()) alert("Metas atualizadas!");
   });
 
   $("sessionForm").addEventListener("submit", (e) => {
@@ -976,8 +1138,7 @@
     $("sessMinutes").value = 50;
     pages.sessions = 1;
     pages.general = 1;
-    save();
-    alert("Sessão registrada!");
+    if (save()) alert("Sessão registrada!");
   });
 
   // 2026-11-03 -> 03/11/2026 (só na exibição; os dados continuam em AAAA-MM-DD)
@@ -1122,6 +1283,12 @@
 
     grid.innerHTML = `<div class="streak-board"><div class="streak-corner"></div><div class="streak-months">${monthsHtml}</div><div class="streak-weekdays">${weekdaysHtml}</div><div class="streak-cells">${cellsHtml}</div></div>`;
 
+    grid.setAttribute("role", "img");
+    grid.setAttribute(
+      "aria-label",
+      `Calendário de consistência: ${dates.size} dia(s) com registro nas últimas 52 semanas`,
+    );
+
     $("streakCurrent").textContent = `${currentStreak(dates)} dia(s) seguidos`;
     $("streakTotal").textContent = `${dates.size} dia(s) com registro`;
   }
@@ -1204,7 +1371,7 @@
     }
 
     const btn = (label, target, disabled, active) =>
-      `<button class="small${active ? " active" : ""}" type="button" ${disabled ? "disabled" : ""} onclick="window.goToPage('${key}',${target})">${label}</button>`;
+      `<button class="small${active ? " active" : ""}" type="button"${active ? ' aria-current="page"' : ""} ${disabled ? "disabled" : ""} onclick="window.goToPage('${key}',${target})">${label}</button>`;
 
     return `<nav class="pager" aria-label="Paginação">${btn("‹ Anterior", page - 1, page === 1)}${nums
       .map((n) => (n === "…" ? '<span class="muted">…</span>' : btn(n, n, false, n === page)))
@@ -1232,7 +1399,7 @@
       `<div class="general-records">${items
         .map(
           (x) =>
-            `<div class="general-record"><div><div class="record-meta"><span class="record-type">${esc(x.label)}</span><span class="muted">${esc(fmtDate(x.date))}</span></div><strong>${esc(x.title)}</strong>${x.meta ? `<div class="muted">${esc(x.meta)}</div>` : ""}</div>${canEdit ? `<button class="small danger" type="button" onclick="window.removeGeneralRecord('${esc(x.type)}','${esc(x.id)}')">Excluir</button>` : ""}</div>`,
+            `<div class="general-record"><div><div class="record-meta"><span class="record-type">${esc(x.label)}</span><span class="muted">${esc(fmtDate(x.date))}</span></div><strong>${esc(x.title)}</strong>${x.meta ? `<div class="muted">${esc(x.meta)}</div>` : ""}</div>${canEdit ? `<button class="small danger" type="button" aria-label="Excluir ${esc(x.label)}: ${esc(x.title)} (${esc(fmtDate(x.date))})" onclick="window.removeGeneralRecord('${esc(x.type)}','${esc(x.id)}')">Excluir</button>` : ""}</div>`,
         )
         .join("")}</div>` + pagerHTML("general", page, totalPages);
   }
@@ -1257,7 +1424,7 @@
       `<div class="general-records">${items
         .map(
           (s) =>
-            `<div class="general-record"><div><div class="record-meta"><span class="record-type">Sessão</span><span class="muted">${esc(fmtDate(s.date))}</span></div><strong>${s.minutes} minuto(s)</strong>${s.notes ? `<div class="muted">${esc(s.notes)}</div>` : ""}</div>${canEdit ? `<button class="small danger" type="button" onclick="window.removeGeneralRecord('session','${esc(s.id)}')">Excluir</button>` : ""}</div>`,
+            `<div class="general-record"><div><div class="record-meta"><span class="record-type">Sessão</span><span class="muted">${esc(fmtDate(s.date))}</span></div><strong>${s.minutes} minuto(s)</strong>${s.notes ? `<div class="muted">${esc(s.notes)}</div>` : ""}</div>${canEdit ? `<button class="small danger" type="button" aria-label="Excluir sessão de ${s.minutes} minutos em ${esc(fmtDate(s.date))}" onclick="window.removeGeneralRecord('session','${esc(s.id)}')">Excluir</button>` : ""}</div>`,
         )
         .join("")}</div>` + pagerHTML("sessions", page, totalPages);
   }
@@ -1283,6 +1450,13 @@
 
     const vals = days.map((d) =>
       rs.filter((r) => r.date === d).reduce((a, r) => a + r.correct, 0),
+    );
+
+    c.setAttribute("role", "img");
+    c.setAttribute(
+      "aria-label",
+      "Acertos por dia nos últimos 7 dias: " +
+        days.map((d, i) => `${d.slice(8, 10)}/${d.slice(5, 7)}: ${vals[i]}`).join("; "),
     );
 
     const max = Math.max(5, ...vals);
@@ -1353,7 +1527,7 @@
       .slice(0, 6);
 
     $("recent").innerHTML = list.length
-      ? `<div class="table-wrap"><table class="rtable"><thead><tr><th>Data</th><th>Disciplina / assunto</th><th>Resultado</th><th>Dificuldade</th></tr></thead><tbody>${list
+      ? `<div class="table-wrap" tabindex="0" role="region" aria-label="Últimos registros"><table class="rtable"><thead><tr><th>Data</th><th>Disciplina / assunto</th><th>Resultado</th><th>Dificuldade</th></tr></thead><tbody>${list
         .map(
           (r) =>
             `<tr><td data-label="Data">${esc(fmtDate(r.date))}</td><td class="cell-main"><b>${esc(r.subject)}</b><br>${esc(r.topic)}</td><td data-label="Resultado">${r.correct}/${r.total} (${pct(r.correct, r.total)}%)</td><td data-label="Dificuldade">${esc(r.error || "—")}</td></tr>`,
@@ -1369,7 +1543,7 @@
       ? list
         .map(
           (r) =>
-            `<div style="display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line);opacity:${r.done ? 0.55 : 1}"><input type="checkbox" style="width:auto;margin-top:4px" ${r.done ? "checked" : ""} ${canEdit ? `onchange=\"window.toggleReview('${esc(r.id)}',this.checked)\"` : "disabled"}><div style="flex:1"><b>${esc(r.topic)}</b><div class="muted">${esc(r.subject)} · ${esc(r.type)} · ${esc(fmtDate(r.date))}</div></div>${canEdit ? `<button class=\"small danger\" onclick=\"window.removeReview('${esc(r.id)}')\">Excluir</button>` : ""}</div>`,
+            `<div style="display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line);opacity:${r.done ? 0.55 : 1}"><input type="checkbox" aria-label="Concluir revisão ${esc(r.topic)}" style="width:auto;margin-top:4px" ${r.done ? "checked" : ""} ${canEdit ? `onchange=\"window.toggleReview('${esc(r.id)}',this.checked)\"` : "disabled"}><div style="flex:1"><b>${esc(r.topic)}</b><div class="muted">${esc(r.subject)} · ${esc(r.type)} · ${esc(fmtDate(r.date))}</div></div>${canEdit ? `<button class=\"small danger\" aria-label=\"Excluir revisão ${esc(r.topic)}\" onclick=\"window.removeReview('${esc(r.id)}')\">Excluir</button>` : ""}</div>`,
         )
         .join("")
       : '<div class="empty">Nenhuma revisão agendada.</div>';
@@ -1435,11 +1609,11 @@
     const list = [...profile.mocks].sort((x, y) => y.date.localeCompare(x.date));
 
     $("mockList").innerHTML = list.length
-      ? `<div class="table-wrap"><table class="rtable rtable-mocks"><thead><tr><th>Data</th><th>Simulado</th><th>Resultado</th><th>Tempo</th><th></th></tr></thead><tbody>${list
+      ? `<div class="table-wrap" tabindex="0" role="region" aria-label="Histórico de simulados"><table class="rtable rtable-mocks"><thead><tr><th>Data</th><th>Simulado</th><th>Resultado</th><th>Tempo</th><th></th></tr></thead><tbody>${list
         .map(
           (m) => {
             const notes = String(m.notes || "").trim();
-            return `<tr><td data-label="Data">${esc(fmtDate(m.date))}</td><td class="cell-main"><b>${esc(m.name)}</b>${notes ? `<div class="mock-note-wrap"><span class="muted mock-note">${esc(notes)}</span><button class="mock-note-toggle hidden" type="button">Ver mais</button></div>` : ""}</td><td data-label="Resultado"><span><b>${pct(m.correct, m.total)}%</b> · ${m.correct}/${m.total}</span></td><td data-label="Tempo">${m.minutes ? m.minutes + " min" : "—"}</td><td class="cell-actions">${canEdit ? `<button class=\"small danger\" onclick=\"window.removeMock('${esc(m.id)}')\">Excluir</button>` : ""}</td></tr>`;
+            return `<tr><td data-label="Data">${esc(fmtDate(m.date))}</td><td class="cell-main"><b>${esc(m.name)}</b>${notes ? `<div class="mock-note-wrap"><span class="muted mock-note">${esc(notes)}</span><button class="mock-note-toggle hidden" type="button">Ver mais</button></div>` : ""}</td><td data-label="Resultado"><span><b>${pct(m.correct, m.total)}%</b> · ${m.correct}/${m.total}</span></td><td data-label="Tempo">${m.minutes ? m.minutes + " min" : "—"}</td><td class="cell-actions">${canEdit ? `<button class=\"small danger\" aria-label=\"Excluir simulado ${esc(m.name)}\" onclick=\"window.removeMock('${esc(m.id)}')\">Excluir</button>` : ""}</td></tr>`;
           },
         )
         .join("")}</tbody></table></div>`
@@ -1525,6 +1699,7 @@
     if (!f) return;
 
     try {
+      if (f.size > 8 * 1024 * 1024) throw new Error("tamanho");
       const data = JSON.parse(await f.text());
       let next = null;
       let importedCredentials = [];
@@ -1547,6 +1722,8 @@
         throw new Error("Formato inválido");
       }
 
+      const dropped = droppedCount;
+
       if (
         !confirm(
           "Importar este backup substitui TODOS os dados atuais deste navegador. Continuar?",
@@ -1559,14 +1736,16 @@
       state = next;
       pages.sessions = 1;
       pages.general = 1;
-      save();
+      const gravou = save();
 
       if (importedCredentials.length) {
         const lines = importedCredentials
           .map((x) => `• ${x.name}: ID ${x.id} | senha ${x.password}`)
           .join("\n");
         alert(`Backup antigo convertido para perfis com login. Guarde as credenciais:\n\n${lines}`);
-      } else {
+      } else if (gravou && dropped > 0) {
+        alert(`Backup importado! ${dropped} registro(s) inválido(s) foram ignorados.`);
+      } else if (gravou) {
         alert("Backup importado!");
       }
     } catch (err) {
@@ -1678,8 +1857,7 @@
     if (!name) return alert("Informe um nome de exibição.");
 
     me.name = name;
-    save();
-    alert("Nome atualizado!");
+    if (save()) alert("Nome atualizado!");
   });
 
   $("copyIdBtn").addEventListener("click", async () => {
@@ -1731,6 +1909,8 @@
   });
 
   if (migrationCredentials.length) {
+    // Grava já no formato novo: sem isso, cada recarga geraria credenciais diferentes.
+    save();
     const lines = migrationCredentials
       .map((x) => `• ${x.name}: ID ${x.id} | senha ${x.password}`)
       .join("\n");
@@ -1738,4 +1918,19 @@
   }
 
   render();
+
+  if (recoveryInfo) {
+    const where = recoveryInfo.copia
+      ? ` Uma cópia do conteúdo original foi guardada no navegador com o nome “${recoveryInfo.copia}”.`
+      : "";
+    if (recoveryInfo.tipo === "corrompido") {
+      alert(
+        `Os dados salvos neste navegador estavam ilegíveis e não puderam ser carregados.${where} O site começou vazio.`,
+      );
+    } else {
+      alert(
+        `${recoveryInfo.dropped} registro(s) inválido(s) foram ignorados ao carregar seus dados.${where}`,
+      );
+    }
+  }
 })();

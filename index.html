@@ -6,6 +6,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#241d4a">
   <title>Rocket Concursos</title>
+  <meta name="description"
+    content="Painel de estudos para concursos: registre questões, revisões e simulados e acompanhe sua evolução até a aprovação.">
+  <link rel="icon"
+    href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🚀%3C/text%3E%3C/svg%3E">
   <link rel="stylesheet" href="style.css">
   <script>
     try {
@@ -17,6 +21,7 @@
 
 <body>
   <div id="app">
+    <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
     <header class="topbar">
       <div class="toprow">
         <div>
@@ -50,7 +55,7 @@
       </div>
     </header>
 
-    <main>
+    <main id="conteudo" tabindex="-1">
       <section id="authPanel" class="grid auth-panel hidden">
         <div class="card span-6">
           <h2>Criar perfil</h2>
@@ -60,6 +65,9 @@
                 placeholder="Ex.: Maria Silva" required></div>
             <div class="field full"><label for="regPassword">Senha (mínimo 7 caracteres)</label><input id="regPassword"
                 type="password" minlength="7" required></div>
+            <div class="field full"><span class="muted" id="passwordWarning" role="note"><strong>Atenção:</strong> sua
+                senha fica salva sem criptografia neste navegador. Não use uma senha que você usa em outros
+                sites.</span></div>
             <div class="field full"><button class="primary" type="submit">Criar perfil e entrar</button></div>
           </form>
         </div>
@@ -82,15 +90,22 @@
           <div id="viewModeNotice" class="notice hidden"></div>
 
           <div class="tabs" role="tablist">
-            <button class="active" data-tab="visao">Visão geral</button>
-            <button data-tab="registro">Registrar questões</button>
-            <button data-tab="revisoes">Revisões</button>
-            <button data-tab="dificuldades">Dificuldades</button>
-            <button data-tab="simulados">Simulados</button>
-            <button data-tab="metas">Metas</button>
-            <button data-tab="registros">Registros gerais</button>
+            <button class="active" role="tab" id="tab-visao" aria-controls="visao" aria-selected="true"
+              data-tab="visao">Visão geral</button>
+            <button role="tab" id="tab-registro" aria-controls="registro" aria-selected="false"
+              data-tab="registro">Registrar questões</button>
+            <button role="tab" id="tab-revisoes" aria-controls="revisoes" aria-selected="false"
+              data-tab="revisoes">Revisões</button>
+            <button role="tab" id="tab-dificuldades" aria-controls="dificuldades" aria-selected="false"
+              data-tab="dificuldades">Dificuldades</button>
+            <button role="tab" id="tab-simulados" aria-controls="simulados" aria-selected="false"
+              data-tab="simulados">Simulados</button>
+            <button role="tab" id="tab-metas" aria-controls="metas" aria-selected="false"
+              data-tab="metas">Metas</button>
+            <button role="tab" id="tab-registros" aria-controls="registros" aria-selected="false"
+              data-tab="registros">Registros gerais</button>
           </div>
-          <section id="visao" class="panel">
+          <section id="visao" class="panel" role="tabpanel" aria-labelledby="tab-visao">
             <div style="margin-bottom:18px">
               <h1>Seu progresso, sem complicação.</h1>
               <p class="muted">Registre o que estudou, acompanhe sua evolução e descubra onde vale investir mais tempo.
@@ -133,11 +148,11 @@
                   <strong id="streakCurrent">0 dia(s) seguidos</strong>
                   <span class="muted" id="streakTotal">0 dia(s) com registro</span>
                 </div>
-                <div id="streakGrid" class="streak-grid" aria-label="Calendário de consistência"></div>
+                <div id="streakGrid" class="streak-grid" tabindex="0" aria-label="Calendário de consistência"></div>
               </div>
             </div>
           </section>
-          <section id="registro" class="panel hidden">
+          <section id="registro" class="panel hidden" role="tabpanel" aria-labelledby="tab-registro">
             <h1>Registrar questões</h1>
             <p class="muted">Preencha somente o essencial. O painel calcula o aproveitamento automaticamente.</p>
             <div class="card">
@@ -176,7 +191,7 @@
               </form>
             </div>
           </section>
-          <section id="revisoes" class="panel hidden">
+          <section id="revisoes" class="panel hidden" role="tabpanel" aria-labelledby="tab-revisoes">
             <h1>Revisões</h1>
             <p class="muted">Transforme erros e assuntos difíceis em revisões agendadas. Sugestão: rever após 1, 7 e 30
               dias.</p>
@@ -203,14 +218,14 @@
               </div>
             </div>
           </section>
-          <section id="registros" class="panel hidden">
+          <section id="registros" class="panel hidden" role="tabpanel" aria-labelledby="tab-registros">
             <h1>Registros gerais</h1>
             <p class="muted">Todos os registros do aluno em um só lugar. Você pode excluir qualquer item.</p>
             <div class="card">
               <div id="generalRecordList"></div>
             </div>
           </section>
-          <section id="dificuldades" class="panel hidden">
+          <section id="dificuldades" class="panel hidden" role="tabpanel" aria-labelledby="tab-dificuldades">
             <h1>Mapa de dificuldades</h1>
             <p class="muted">Veja quais assuntos e tipos de erro mais aparecem nos seus registros. Use isso para decidir
               o
@@ -229,7 +244,7 @@
               </div>
             </div>
           </section>
-          <section id="simulados" class="panel hidden">
+          <section id="simulados" class="panel hidden" role="tabpanel" aria-labelledby="tab-simulados">
             <h1>Simulados</h1>
             <p class="muted">Registre o resultado de provas completas ou blocos cronometrados e acompanhe a evolução.
             </p>
@@ -257,9 +272,10 @@
               </div>
             </div>
           </section>
-          <section id="metas" class="panel hidden">
+          <section id="metas" class="panel hidden" role="tabpanel" aria-labelledby="tab-metas">
             <h1>Metas semanais</h1>
-            <p class="muted">Defina uma meta possível para sua rotina. A meta de questões usa seus registros de questões e a meta de sessões usa somente as sessões cadastradas no formulário abaixo.</p>
+            <p class="muted">Defina uma meta possível para sua rotina. A meta de questões usa seus registros de questões
+              e a meta de sessões usa somente as sessões cadastradas no formulário abaixo.</p>
             <div class="notice">Uma meta boa é aquela que cabe na vida real. Se a semana ficar apertada, reduza
               temporariamente a meta e mantenha o hábito. Não acumule sessões perdidas como dívida.</div>
             <div class="grid">
@@ -281,8 +297,10 @@
                 <h2>Registrar sessão de estudo</h2>
                 <form id="sessionForm" class="form-grid">
                   <div class="field"><label for="sessDate">Data</label><input id="sessDate" type="date" required></div>
-                  <div class="field"><label for="sessMinutes">Duração (minutos)</label><input id="sessMinutes" type="number" min="1" value="50" required></div>
-                  <div class="field full"><label for="sessNotes">Observação (opcional)</label><input id="sessNotes" maxlength="120" placeholder="Ex.: revisão de constitucional"></div>
+                  <div class="field"><label for="sessMinutes">Duração (minutos)</label><input id="sessMinutes"
+                      type="number" min="1" value="50" required></div>
+                  <div class="field full"><label for="sessNotes">Observação (opcional)</label><input id="sessNotes"
+                      maxlength="120" placeholder="Ex.: revisão de constitucional"></div>
                   <div class="field full"><button class="primary" type="submit">Salvar sessão</button></div>
                 </form>
               </div>
@@ -293,7 +311,7 @@
             </div>
           </section>
         </section>
-        
+
 
         <section id="view-perfil" class="view hidden">
           <h1>Meu perfil</h1>
@@ -305,7 +323,8 @@
                 <button class="primary" id="changePhotoBtn" type="button">Alterar foto</button>
                 <button class="danger" id="removePhotoBtn" type="button">Remover foto</button>
               </div>
-              <input id="avatarInput" type="file" accept="image/png,image/jpeg,image/webp" class="hidden">
+              <input id="avatarInput" aria-label="Escolher foto de perfil" type="file"
+                accept="image/png,image/jpeg,image/webp" class="hidden">
               <p class="muted">JPG, PNG ou WebP. A foto é recortada em formato quadrado e fica salva só neste navegador.
               </p>
             </div>
@@ -396,7 +415,8 @@
         </div>
         <div class="actions" style="margin-top:10px"><button class="small" id="exportBtn">Exportar
             backup</button><button class="small" id="importBtn">Importar backup</button><input id="importFile"
-            type="file" accept="application/json" class="hidden"><button class="small danger" id="clearBtn">Apagar meus
+            aria-label="Escolher arquivo de backup" type="file" accept="application/json" class="hidden"><button
+            class="small danger" id="clearBtn">Apagar meus
             dados</button></div>
       </section>
     </main>

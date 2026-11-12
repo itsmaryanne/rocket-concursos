@@ -5,15 +5,17 @@ export const $ = (id) => document.getElementById(id);
 
 // Janela real do jsdom. Os onclick="window.goToPage(...)" do app rodam nela,
 // então o app.js precisa ser executado nela também (e não no global do Node).
-const janela = () => globalThis.jsdom?.window ?? window;
+export const janela = () => globalThis.jsdom?.window ?? window;
 
 /**
  * Carrega o index.html no jsdom e executa o app.js (IIFE) do zero.
- * Chame em beforeEach: cada teste começa com localStorage vazio.
+ * Chame em beforeEach: cada teste começa com localStorage vazio (ou com `seed`).
  */
-export function loadApp() {
+export function loadApp(seed = {}) {
   const win = janela();
   win.localStorage.clear();
+  // Dados gravados ANTES do app iniciar (para testar carga, migração, corrupção...)
+  for (const [chave, valor] of Object.entries(seed)) win.localStorage.setItem(chave, valor);
 
   const html = readFileSync(resolve(process.cwd(), "index.html"), "utf8");
   const body = html.match(/<body[^>]*>([\s\S]*)<\/body>/i)[1];

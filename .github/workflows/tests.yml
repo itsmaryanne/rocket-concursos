@@ -1,0 +1,90 @@
+name: Testes
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  testes:
+    name: Vitest + Playwright (Chromium)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Instalar Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Vitest
+        run: npm test
+
+      - name: Playwright (desktop e celular)
+        run: npm run test:e2e
+
+      - name: Cobertura do app.js
+        if: always()
+        continue-on-error: true
+        run: npm run test:e2e:cobertura
+
+      - name: Guardar cobertura
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cobertura-app-js
+          path: |
+            coverage-e2e/resumo.md
+            coverage-e2e/app.html
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Guardar relatório se algo falhar
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: relatorio-playwright
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+
+  navegadores:
+    name: Firefox + Safari (WebKit)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Não bloqueia enquanto estes navegadores ainda não foram validados.
+    # Quando estiverem verdes, remova a linha abaixo.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Instalar Firefox e WebKit
+        run: npx playwright install --with-deps firefox webkit
+
+      - name: Playwright (Firefox, Safari, iPhone)
+        run: npx playwright test --project=firefox --project=webkit --project=mobile-safari
+
+      - name: Guardar relatório se algo falhar
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: relatorio-navegadores
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7

@@ -25,8 +25,15 @@ export default defineConfig({
         reuseExistingServer: true,
         timeout: 30_000,
       },
+  // npm run test:e2e        -> desktop + mobile (Chromium; rápido, uso diário)
+  // npm run test:e2e:todos  -> + Firefox, WebKit (Safari) e iPhone
+  // npm run test:e2e:edge   -> Microsoft Edge (precisa do Edge instalado)
   projects: [
     { name: "desktop", use: { ...devices["Desktop Chrome"] } },
     { name: "mobile", use: { ...devices["Pixel 5"] } },
+    { name: "firefox", use: { ...devices["Desktop Firefox"] } },
+    { name: "webkit", use: { ...devices["Desktop Safari"] } },
+    { name: "mobile-safari", use: { ...devices["iPhone 13"] } },
+    { name: "edge", use: { ...devices["Desktop Edge"], channel: "msedge" } },
   ],
 });

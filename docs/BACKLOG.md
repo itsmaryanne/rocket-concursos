@@ -5,7 +5,7 @@ Atualizado em 11/11/2026. Legenda: ✅ feito e testado · 🟡 parcial ou não v
 ## Decisões
 
 - Continua em **HTML/CSS/JS puro** (sem Angular, sem framework) por enquanto.
-- Backend: proposta em `docs/BACKEND-PLANO.md` e rascunho em `supabase/schema.sql`. **Aguardando as decisões listadas no plano.**
+- Backend: **Cloudflare Workers + D1** (custo zero, login por ID de 5 dígitos sem e-mail). Plano em `docs/BACKEND-PLANO.md`; etapa 1 pronta em `backend/`. Supabase descartado (pausa projetos inativos).
 - Modularização do `app.js`: junto da camada de armazenamento do backend (exige módulos ES e trocar os `onclick` inline).
 
 ## Achados da auditoria
@@ -19,8 +19,8 @@ Atualizado em 11/11/2026. Legenda: ✅ feito e testado · 🟡 parcial ou não v
 | A5 | Itens inválidos sumiam em silêncio | ✅ contagem informada + cópia do original |
 | A6 | Migração v1/v2 mostrava credenciais não gravadas | ✅ grava já em v3 |
 | A7 | Alertas "salvo!" sem ter salvo | ✅ só quando gravou |
-| A8 | Senhas em texto puro no `localStorage` | 🟡 aviso na tela; solução real exige backend |
-| A9 | Contas e amizades só no mesmo navegador | ⬜ exige backend |
+| A8 | Senhas em texto puro no `localStorage` | 🟡 aviso na tela; backend com hash pronto (etapa 1), falta ligar o site |
+| A9 | Contas e amizades só no mesmo navegador | ⬜ etapas 5 e 7 do backend |
 | A10 | Abas sem semântica ARIA, botões "Excluir" sem contexto, gráfico e calendário sem texto alternativo | ✅ corrigido |
 | A11 | Navegadores sem `light-dark()` perdiam o tema | ✅ bloco de reserva (cores idênticas, validado) |
 
@@ -44,10 +44,12 @@ Atualizado em 11/11/2026. Legenda: ✅ feito e testado · 🟡 parcial ou não v
 
 ## Pendente
 
-| ID | Tarefa | Depende de |
+| ID | Tarefa | Estado / depende de |
 |---|---|---|
-| RC-012 a RC-014 | Autenticação, senhas, controle de acesso | backend |
-| RC-017 a RC-022 | Modularizar `app.js` | backend (etapa 2 do plano) |
+| RC-012 | Arquitetura de autenticação | ✅ definida (`docs/BACKEND-PLANO.md`) |
+| RC-013 | Senhas com hash seguro | 🟡 implementado e testado; falta publicar e medir o CPU no plano gratuito |
+| RC-014 | Controle de acesso | ⬜ etapas 5 e 7 |
+| RC-017 a RC-022 | Modularizar `app.js` | backend (etapa 4 do plano) |
 | RC-028 | Versão estável 1.0, changelog | backend |
 | — | Trocar `alert()` por avisos na página | junto do backend |
 | — | Rodar Vitest, Firefox, WebKit e Lighthouse e corrigir o que aparecer | você rodar e me enviar os resultados |

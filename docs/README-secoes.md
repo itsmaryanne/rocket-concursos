@@ -13,7 +13,7 @@ rocket-concursos/
 ├── e2e/              testes do Playwright (navegador real)
 ├── scripts/          cobertura e preparo do Lighthouse
 ├── docs/             backlog, acessibilidade e plano do backend
-├── supabase/         rascunho do banco (ainda não aplicado)
+├── backend/          API (Cloudflare Workers + D1): contas e sessões, com testes
 ├── .github/workflows/ testes, cobertura e Lighthouse
 ├── vitest.config.js
 ├── playwright.config.js
@@ -27,6 +27,7 @@ npm install
 npx playwright install chromium
 
 npm test                    # Vitest
+npm run test:backend        # backend (Node 22+)
 npm run test:e2e            # Playwright (desktop e celular)
 npm run test:e2e:todos      # + Firefox, Safari e iPhone
 npm run test:e2e:cobertura  # cobertura do app.js em coverage-e2e/

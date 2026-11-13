@@ -1,0 +1,17 @@
+# Configuração do Worker (Cloudflare). Rode os comandos de dentro da pasta backend/.
+name = "rocket-concursos-api"
+main = "src/index.js"
+compatibility_date = "2026-11-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "rocket-concursos"
+database_id = "COLE-AQUI-O-ID-DO-BANCO"   # aparece ao rodar: npx wrangler d1 create rocket-concursos
+
+[vars]
+# Endereço(s) do seu site, separados por vírgula, SEM barra no final.
+ALLOWED_ORIGINS = "https://SEU-USUARIO.github.io"
+# Custo do hash de senha. Veja o README: meça no plano gratuito e ajuste.
+PBKDF2_ITERATIONS = "100000"
+
+# O segredo PASSWORD_PEPPER NÃO fica aqui. Use: npx wrangler secret put PASSWORD_PEPPER

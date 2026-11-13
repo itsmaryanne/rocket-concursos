@@ -5,6 +5,7 @@ Sem Angular e sem frameworks. Os arquivos do site (`index.html`, `style.css`, `a
 | Ferramenta | Pasta | Para quê |
 |---|---|---|
 | **Vitest + jsdom + Testing Library** | `tests/` | Regras do app, rápido |
+| **Node test runner + SQLite do Node** | `backend/test/` | Backend: criptografia, esquema SQL e API de autenticação (sem internet) |
 | **Playwright** | `e2e/` | Navegador de verdade: layout, acessibilidade, backup, vários navegadores |
 | **Cobertura (V8 do Chromium)** | `scripts/cobertura.mjs` | Mostra quais linhas e funções do `app.js` os testes executam |
 | **Lighthouse CI** | `lighthouserc.json` | Desempenho, acessibilidade, boas práticas e SEO da página |
@@ -27,12 +28,13 @@ npm i -D @axe-core/playwright             # ativa o teste do axe-core
 
 ```bash
 npm test                    # Vitest
+npm run test:backend        # backend (Node 22+)
 npm run test:e2e            # Playwright: desktop + celular (Chromium)
 npm run test:e2e:todos      # + Firefox, Safari (WebKit) e iPhone
 npm run test:e2e:edge       # Microsoft Edge (precisa do Edge instalado)
 npm run test:e2e:ui         # Playwright com interface visual
 npm run test:e2e:cobertura  # roda o Playwright e gera coverage-e2e/resumo.md e app.html
-npm run test:all            # Vitest + Playwright
+npm run test:all            # Vitest + backend + Playwright
 npm run lighthouse          # Lighthouse (precisa do Chrome instalado)
 ```
 
@@ -55,6 +57,11 @@ Relatório do Playwright: `npx playwright show-report`.
 - `integridade.test.js`: JSON corrompido, falha ao gravar, dados inválidos, IDs hostis, IDs duplicados, migração v2
 - `fluxos.test.js`: aviso de senha, perfil, revisões, simulados, excluir registro, metas, remover amigo
 
+**`backend/test/` (Node, 47 testes)**
+- `crypto.test.js`: hash de senha, pimenta, sal, código de recuperação, ID público, tempo constante
+- `auth.test.js`: cadastro, login, sair, recuperar, limite de tentativas, sessões, CORS, sem vazar dados, sem revelar IDs
+- `schema.test.js`: restrições do banco (IDs, datas, acertos, chaves por conta, cascata, amizades)
+
 **`e2e/` (Playwright, desktop e celular)**
 - `auth`, `amizades`, `backup`, `paginacao`, `streak`, `tema-responsivo`: fluxos principais
 - `fluxos.spec.js`: perfil (nome, foto, imagem corrompida), revisões, simulados, registros, metas, remover amigo
@@ -67,6 +74,7 @@ Relatório do Playwright: `npx playwright show-report`.
 
 - **Playwright (Chromium, desktop e celular):** 136 testes passaram e 2 foram pulados (o axe-core, que precisa do pacote opcional).
 - **Cobertura do `app.js`:** 97,5% das linhas e 100% das funções.
+- **Backend (47 testes):** passam. Foram validados também por mutação: 12 defeitos de segurança inseridos de propósito, todos pegos pelos testes. Rodam sobre um SQLite do Node no lugar do D1; a Cloudflare real não foi testada.
 - **Vitest:** sintaxe checada, **não executado** no ambiente onde foi escrito. Rode `npm test` e avise se algo falhar.
 - **Firefox, WebKit e iPhone:** configurados, **não executados**. No GitHub Actions rodam num job que ainda não bloqueia.
 - **Lighthouse:** configurado, **não executado**.

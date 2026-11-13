@@ -27,6 +27,9 @@ jobs:
       - name: Vitest
         run: npm test
 
+      - name: Backend (regras, esquema e API)
+        run: npm run test:backend
+
       - name: Playwright (desktop e celular)
         run: npm run test:e2e
 

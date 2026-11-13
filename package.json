@@ -1,11 +1,20 @@
 {
+  "name": "rocket-concursos",
+  "version": "1.0.0",
+  "private": true,
   "type": "module",
+  "description": "Rocket Concursos - painel de estudos (HTML/CSS/JS puro)",
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui",
-    "test:all": "vitest run && playwright test"
+    "test:backend": "node --test \"backend/test/*.test.js\"",
+    "test:e2e": "playwright test --project=desktop --project=mobile",
+    "test:e2e:todos": "playwright test --project=desktop --project=mobile --project=firefox --project=webkit --project=mobile-safari",
+    "test:e2e:edge": "playwright test --project=edge",
+    "test:e2e:ui": "playwright test --ui --project=desktop",
+    "test:e2e:cobertura": "node scripts/cobertura.mjs --rodar",
+    "test:all": "vitest run && node --test \"backend/test/*.test.js\" && playwright test --project=desktop --project=mobile",
+    "lighthouse": "node scripts/preparar-site.mjs && npx --yes @lhci/cli autorun"
   },
   "devDependencies": {
     "@playwright/test": "^1.65.0",

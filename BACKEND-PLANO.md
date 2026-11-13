@@ -1,38 +1,56 @@
-# Plano do backend (rascunho)
+# Plano do backend: Cloudflare Workers + D1
 
-Objetivo: contas reais, dados sincronizados entre aparelhos e amizades que funcionam entre pessoas diferentes. Isso resolve os achados **A8** (senhas em texto puro) e **A9** (contas só no mesmo navegador) do `docs/BACKLOG.md`.
+Substitui o rascunho anterior (Supabase), que foi descartado: o plano gratuito pausa projetos inativos e o login por ID numérico sem e-mail exigiria contornos.
 
-## Escolha proposta: Supabase
+## Requisitos (suas decisões)
 
-- Login seguro pronto (a senha nunca passa pelo seu código nem fica guardada por você).
-- Banco Postgres com **Row Level Security**: o servidor decide quem lê o quê, e não o navegador.
-- Funciona com o site atual em HTML/CSS/JS puro, publicado no GitHub Pages (a biblioteca é carregada no navegador).
-- Existe plano gratuito. **Confira os limites atuais no site do Supabase antes de decidir** (por exemplo, o que acontece com projetos inativos).
+| Requisito | Como é atendido |
+|---|---|
+| Custo R$ 0 | Workers (plano gratuito) + D1 (plano gratuito), sem cobrança automática ao passar do limite |
+| Login por ID de 5 dígitos + senha | Autenticação própria no Worker |
+| Sem e-mail | Código de recuperação de 100 bits, mostrado uma vez |
+| Modo offline mantido | O site continua funcionando com `localStorage`; o servidor só complementa |
+| Sincronização entre aparelhos | Etapa 5 (o esquema já tem `updated_at` e `deleted_at`) |
+| Amizades entre contas diferentes | Etapa 7 (endpoints que validam cada ação) |
+| Dados só do dono | Toda consulta filtra por `account_id` da sessão |
+| ID pode crescer no futuro | `public_id` é só um apelido; a chave real é um UUID |
 
-## Decisões que preciso de você
+## Riscos que precisam ficar claros
 
-1. **Login por e-mail e senha?** O Supabase Auth usa e-mail. Hoje o site usa só "nome + ID + senha". O e-mail passa a ser dado pessoal (LGPD).
-2. **Manter o modo sem conta (só navegador)?** Seria um "modo offline" para quem não quer cadastro.
-3. **ID de amigo:** hoje são 5 números. O rascunho usa 8 dígitos, porque 5 dígitos acabariam rápido com muitos usuários.
-4. **Amigos veem os dados uns dos outros?** Hoje o amigo vê o dashboard inteiro. O rascunho mantém isso (somente leitura). Dá para limitar o que é compartilhado.
-5. **Política de privacidade** e aviso de cookies/armazenamento: precisa existir antes de coletar e-mails.
+1. **Autenticação própria é a parte mais delicada.** Aqui ela está feita com Web Crypto padrão (PBKDF2, sal, pimenta, tempo constante), mas não é um serviço gerenciado e merece revisão antes de ter usuários reais.
+2. **Hash de senha no plano gratuito:** o Worker gratuito tem pouco CPU por requisição. Um hash forte (centenas de milhares de iterações) pode não caber, e a Web Crypto do Workers limita as iterações. O custo é configurável (`PBKDF2_ITERATIONS`) e precisa ser **medido depois do deploy**. Hash mais fraco compensa-se com senha longa (mínimo de 10) e pimenta.
+3. **Negação de serviço pela cota:** um bot pode gastar as requisições e gravações diárias grátis e derrubar o login para todos até a renovação. O site segue funcionando no modo local.
+4. **Token no navegador:** como o site (GitHub Pages) e a API ficam em domínios diferentes, a sessão usa token em `localStorage`, que roubo por XSS expõe. Por isso as correções de validação e escape do `app.js` são parte da segurança do backend.
+5. **ID de 5 dígitos** tem só 100 mil combinações. Por isso ele nunca é tratado como segredo, e o limite de tentativas vale também para IDs que não existem.
+6. **Sem e-mail e sem o código, a conta perdida não tem como ser recuperada.**
 
 ## Etapas
 
-1. **Criar um projeto Supabase de teste** e rodar `supabase/schema.sql` (ele é um rascunho: revise antes).
-2. **Isolar o armazenamento no `app.js`:** hoje `load()` e `save()` falam direto com o `localStorage`. Criar uma camada (`repositorio`) com duas implementações: local e Supabase. Os testes atuais continuam valendo para a versão local.
-3. **Login:** cadastro, entrada, saída e recuperação de senha pelo Supabase Auth. A tela atual de ID e senha é substituída.
-4. **Dados:** registros, revisões, simulados e sessões passam a ir para as tabelas, com os mesmos limites de validação que já existem no `app.js`.
-5. **Amizades:** pedidos, aceite, recusa e remoção usando a tabela `friendships` (as políticas já impedem pedir em nome de outra pessoa).
-6. **Migração dos dados atuais:** ao entrar pela primeira vez, oferecer "importar meus dados deste navegador" a partir do backup JSON atual.
-7. **Testes de segurança:** com dois usuários de teste, provar que o usuário A não lê nem altera os dados do usuário B (nem com a chave pública do navegador). Esses testes entram no Playwright.
+| Etapa | Entrega | Estado |
+|---|---|---|
+| 1 | Banco e autenticação: cadastro, login, sair, recuperar, limite de tentativas, sessões | ✅ código e testes prontos (`backend/`); falta publicar e medir o CPU |
+| 2 | Esquema SQL revisado | ✅ `backend/schema.sql` (testado em SQLite) |
+| 3 | Ligar o site à API (tela de entrar com a conta), mantendo o modo local | ⬜ |
+| 4 | Camada de armazenamento no `app.js` (local e remoto) | ⬜ |
+| 5 | Sincronização (mudanças desde X, apagados, conflito por data de alteração) | ⬜ |
+| 6 | Migração do JSON antigo sem duplicar | ⬜ |
+| 7 | Amizades no servidor: pedir, aceitar, recusar, remover | ⬜ |
+| 8 | Compartilhamento configurável pelo usuário | ⬜ |
+| 9 | Auditoria: testes de segurança entre duas contas | ⬜ |
 
-## Cuidados
+## Decisões ainda abertas
 
-- A chave pública (`anon`) do Supabase **pode** ficar no site, porque a proteção está no RLS. A chave `service_role` **nunca** vai para o repositório nem para o navegador.
-- Sem RLS ligado em todas as tabelas, qualquer pessoa leria tudo. O rascunho liga em todas; testar isso é a etapa 7.
-- Use um projeto separado para os testes automatizados. Não rode testes no projeto com dados reais.
+- **Conflitos na sincronização:** proposta é "a última alteração vence", por item. Serve para este app (cada registro é editado quase só em um aparelho).
+- **O que um amigo enxerga:** hoje, tudo em modo leitura. Proposta: o usuário escolhe (por exemplo, esconder as observações).
+- **Avatar:** guardar no servidor aumenta o consumo; proposta é reduzir para uma imagem pequena ou manter só local no começo.
+- **Troca de senha e exclusão de conta:** faltam; entram junto da etapa 3.
 
-## Fora do escopo agora
+## Regras para todas as etapas
 
-Modularizar o `app.js` em vários arquivos (item 4 do plano original). Faz mais sentido junto da etapa 2, quando a camada de armazenamento for isolada.
+1. Nenhuma funcionalidade atual pode sumir.
+2. O modo offline não depende do backend.
+3. Nenhum segredo vai para o navegador nem para o repositório.
+4. Um usuário nunca acessa dados de outro sem autorização.
+5. Dados locais nunca são apagados por falha de sincronização.
+6. Toda funcionalidade nova tem teste.
+7. Backups exportáveis continuam existindo, para poder trocar de provedor.

@@ -1,0 +1,12 @@
+# Junte estas linhas ao seu .gitignore (não substitua o arquivo)
+node_modules/
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+coverage-e2e/
+_site/
+.lighthouseci/
+.wrangler/
+.dev.vars
+backend/.dev.vars
